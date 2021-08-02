@@ -1,0 +1,3 @@
+lox = files([
+  'main.cpp',
+])
