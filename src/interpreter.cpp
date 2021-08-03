@@ -1,5 +1,6 @@
 #include "interpreter.hpp"
 
+#include "evaluator.hpp"
 #include "lox.hpp"
 #include "overloaded.hpp"
 #include "parser.hpp"
@@ -33,16 +34,30 @@ void lox::interpreter::error(size_t line, std::u8string_view message)
 	report(line, u8"", message);
 }
 
+std::u8string lox::interpreter::interpret(const lox::expr &expr)
+{
+	std::optional<lox::object> result = expr.visit(lox::evaluator{*this});
+	return result ? result->to_string() : u8"";
+}
+
 int lox::interpreter::run(std::u8string_view file)
 {
 	lox::scanner scanner{*this, file};
-	lox::parser parser{*this, scanner.scan_tokens()};
-	lox::expr_ptr expr = parser.parse();
+	auto tokens = scanner.scan_tokens();
+	if (had_error) return EXIT_FAILURE;
 
-	if (had_error || !expr) return EXIT_FAILURE;
+	lox::parser parser{*this, std::move(tokens)};
 
-	std::cout << lox::as_astring_view(expr->visit(lox::prefix_ast_printer))
-	          << "\n";
+	while (!parser.empty())
+	{
+		lox::expr_ptr expr = parser.parse();
+		if (had_error || !expr) return EXIT_FAILURE;
+
+		std::u8string result = interpret(*expr);
+		if (had_error) return EXIT_FAILURE;
+
+		std::cout << lox::as_astring_view(result) << "\n";
+	}
 
 	return EXIT_SUCCESS;
 }

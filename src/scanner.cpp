@@ -75,7 +75,8 @@ void lox::scanner::scan_string()
 
 	// trim the surrounding quotes
 	auto value = source.substr(start + 1, (current - 1) - (start + 1));
-	add_token(lox::token_type::STRING, lox::object{.value = value});
+	add_token(lox::token_type::STRING,
+	          lox::object{.value = std::u8string(value)});
 }
 
 void lox::scanner::scan_number()

@@ -12,9 +12,21 @@ namespace lox
 {
 	struct object
 	{
-		std::variant<std::monostate, std::u8string_view, double, bool> value;
+		std::variant<std::monostate, std::u8string, double, bool> value;
 
 		std::u8string to_string() const;
+
+		bool is_truthy() const;
+
+		const std::u8string *get_string() const;
+
+		const double *get_number() const;
+
+		const bool *get_bool() const;
+
+		bool operator==(const lox::object &rhs) const;
+
+		bool operator!=(const lox::object &rhs) const;
 
 		template<typename F>
 		auto visit(F &&f)
