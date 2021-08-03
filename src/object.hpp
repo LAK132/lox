@@ -14,20 +14,24 @@ namespace lox
 	{
 		std::variant<std::monostate, std::u8string_view, double> value;
 
+		std::u8string to_string() const;
+
+		template<typename F>
+		auto visit(F &&f)
+		{
+			return std::visit(f, value);
+		}
+
+		template<typename F>
+		auto visit(F &&f) const
+		{
+			return std::visit(f, value);
+		}
+
 		friend inline std::ostream &operator<<(std::ostream &strm,
 		                                       const object &obj)
 		{
-			return std::visit(
-			  lox::overloaded{
-			    [&](std::monostate) -> std::ostream & { return strm; },
-			    [&](std::u8string_view str) -> std::ostream & {
-				    return strm << "`" << lox::as_astring_view(str) << "`";
-			    },
-			    [&](const double &number) -> std::ostream & {
-				    return strm << number;
-			    },
-			  },
-			  obj.value);
+			return strm << lox::as_astring_view(obj.to_string());
 		}
 	};
 
