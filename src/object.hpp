@@ -12,7 +12,7 @@ namespace lox
 {
 	struct object
 	{
-		std::variant<std::monostate, std::u8string_view, double> value;
+		std::variant<std::monostate, std::u8string_view, double, bool> value;
 
 		std::u8string to_string() const;
 

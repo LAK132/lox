@@ -1,6 +1,8 @@
 #ifndef LOX_INTERPRETER_HPP
 #define LOX_INTERPRETER_HPP
 
+#include "token.hpp"
+
 #include <filesystem>
 #include <string_view>
 
@@ -13,6 +15,8 @@ namespace lox
 		void report(size_t line,
 		            std::u8string_view where,
 		            std::u8string_view message);
+
+		void error(const lox::token &token, std::u8string_view message);
 
 		void error(size_t line, std::u8string_view message);
 

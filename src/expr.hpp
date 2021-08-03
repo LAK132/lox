@@ -55,6 +55,8 @@ namespace lox
 			return std::visit(f, value);
 		}
 	};
+
+	using expr_ptr = lox::expr::expr_ptr;
 }
 
 #endif

@@ -2,6 +2,8 @@
 
 #include "lox.hpp"
 #include "overloaded.hpp"
+#include "parser.hpp"
+#include "printer.hpp"
 #include "scanner.hpp"
 #include "string_hacks.hpp"
 
@@ -16,6 +18,16 @@ void lox::interpreter::report(size_t line,
 	had_error = true;
 }
 
+void lox::interpreter::error(const lox::token &token,
+                             std::u8string_view message)
+{
+	if (token.type == lox::token_type::EOF_TOK)
+		report(token.line, u8" at end", message);
+	else
+		report(
+		  token.line, u8" at '" + std::u8string(token.lexeme) + u8"'", message);
+}
+
 void lox::interpreter::error(size_t line, std::u8string_view message)
 {
 	report(line, u8"", message);
@@ -24,10 +36,13 @@ void lox::interpreter::error(size_t line, std::u8string_view message)
 int lox::interpreter::run(std::u8string_view file)
 {
 	lox::scanner scanner{*this, file};
-	auto tokens = scanner.scan_tokens();
-	if (had_error) return EXIT_FAILURE;
+	lox::parser parser{*this, scanner.scan_tokens()};
+	lox::expr_ptr expr = parser.parse();
 
-	for (const auto &token : tokens) std::cout << token << "\n";
+	if (had_error || !expr) return EXIT_FAILURE;
+
+	std::cout << lox::as_astring_view(expr->visit(lox::prefix_ast_printer))
+	          << "\n";
 
 	return EXIT_SUCCESS;
 }
