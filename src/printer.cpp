@@ -22,6 +22,14 @@ std::u8string lox::prefix_ast_printer_t::parenthesize(
 }
 
 std::u8string lox::prefix_ast_printer_t::operator()(
+  const lox::expr::assign &expr) const
+{
+	assert(expr.value);
+	return u8"(assign " + std::u8string(expr.name.lexeme) + u8" " +
+	       expr.value->visit(*this) + u8")";
+}
+
+std::u8string lox::prefix_ast_printer_t::operator()(
   const lox::expr::binary &expr) const
 {
 	return parenthesize(expr.op.lexeme, {expr.left.get(), expr.right.get()});
@@ -45,6 +53,12 @@ std::u8string lox::prefix_ast_printer_t::operator()(
 	return parenthesize(expr.op.lexeme, {expr.right.get()});
 }
 
+std::u8string lox::prefix_ast_printer_t::operator()(
+  const lox::expr::variable &expr) const
+{
+	return std::u8string(expr.name.lexeme);
+}
+
 /* --- postfix_ast_printer_t --- */
 
 std::u8string lox::postfix_ast_printer_t::common(
@@ -59,6 +73,14 @@ std::u8string lox::postfix_ast_printer_t::common(
 	}
 	result += name;
 	return result;
+}
+
+std::u8string lox::postfix_ast_printer_t::operator()(
+  const lox::expr::assign &expr) const
+{
+	assert(expr.value);
+	return std::u8string(expr.name.lexeme) + u8" " + expr.value->visit(*this) +
+	       u8" assign";
 }
 
 std::u8string lox::postfix_ast_printer_t::operator()(
@@ -83,4 +105,10 @@ std::u8string lox::postfix_ast_printer_t::operator()(
   const lox::expr::unary &expr) const
 {
 	return common(expr.op.lexeme, {expr.right.get()});
+}
+
+std::u8string lox::postfix_ast_printer_t::operator()(
+  const lox::expr::variable &expr) const
+{
+	return std::u8string(expr.name.lexeme);
 }

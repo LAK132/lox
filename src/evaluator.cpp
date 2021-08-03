@@ -1,10 +1,27 @@
 #include "evaluator.hpp"
 
+#include <iostream>
+
 std::nullopt_t lox::evaluator::error(const lox::token &token,
                                      std::u8string_view message)
 {
 	interpreter.error(token, message);
 	return std::nullopt;
+}
+
+std::optional<lox::object> lox::evaluator::operator()(
+  const lox::expr::assign &expr)
+{
+	std::optional<lox::object> maybe_value = expr.value->visit(*this);
+	if (!maybe_value) return std::nullopt;
+
+	if (auto it = environment->replace(expr.name, *maybe_value);
+	    it != environment->end())
+		return it->second;
+	else
+		return error(expr.name,
+		             u8"Undefined variable '" + std::u8string(expr.name.lexeme) +
+		               u8"'.");
 }
 
 std::optional<lox::object> lox::evaluator::operator()(
@@ -143,4 +160,66 @@ std::optional<lox::object> lox::evaluator::operator()(
 
 		default: return lox::object{};
 	}
+}
+
+std::optional<lox::object> lox::evaluator::operator()(
+  const lox::expr::variable &expr)
+{
+	if (auto it = environment->find(expr.name); it != environment->end())
+		return it->second;
+	else
+		return std::nullopt;
+}
+
+std::optional<std::u8string> lox::evaluator::operator()(
+  const lox::stmt::block &stmt)
+{
+	environment = lox::environment::make(environment);
+	for (const auto &s : stmt.statements)
+	{
+		if (!s || !s->visit(*this))
+		{
+			environment = environment->enclosing;
+			return std::nullopt;
+		}
+	}
+	environment = environment->enclosing;
+	return std::make_optional<std::u8string>();
+}
+
+std::optional<std::u8string> lox::evaluator::operator()(
+  const lox::stmt::expr &stmt)
+{
+	if (auto expr = stmt.expression->visit(*this); !expr)
+		return std::nullopt;
+	else
+		return expr->to_string() + u8"\n";
+}
+
+std::optional<std::u8string> lox::evaluator::operator()(
+  const lox::stmt::print &stmt)
+{
+	std::optional<lox::object> maybe_value = stmt.expression->visit(*this);
+	if (!maybe_value) return std::nullopt;
+
+	std::cout << lox::as_astring_view(maybe_value->to_string()) << "\n";
+
+	return std::make_optional<std::u8string>();
+}
+
+std::optional<std::u8string> lox::evaluator::operator()(
+  const lox::stmt::var &stmt)
+{
+	if (stmt.init)
+	{
+		std::optional<lox::object> maybe_value = stmt.init->visit(*this);
+		if (!maybe_value) return std::nullopt;
+		environment->emplace(stmt.name, std::move(*maybe_value));
+	}
+	else
+	{
+		environment->emplace(stmt.name, lox::object{});
+	}
+
+	return std::make_optional<std::u8string>();
 }

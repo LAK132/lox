@@ -1,4 +1,5 @@
 lox = files([
+  'environment.cpp',
   'evaluator.cpp',
   'expr.cpp',
   'interpreter.cpp',
@@ -8,6 +9,7 @@ lox = files([
   'parser.cpp',
   'printer.cpp',
   'scanner.cpp',
+  'stmt.cpp',
   'string_hacks.cpp',
   'token.cpp',
 ])

@@ -3,6 +3,7 @@
 
 #include "expr.hpp"
 #include "interpreter.hpp"
+#include "stmt.hpp"
 #include "token.hpp"
 
 #include <cstdint>
@@ -46,9 +47,23 @@ namespace lox
 
 		lox::expr_ptr parse_equality();
 
+		lox::expr_ptr parse_assignment();
+
 		lox::expr_ptr parse_expression();
 
-		lox::expr_ptr parse();
+		lox::stmt_ptr parse_print_statement();
+
+		lox::stmt_ptr parse_expression_statement();
+
+		std::optional<std::vector<lox::stmt_ptr>> parse_block();
+
+		lox::stmt_ptr parse_statement();
+
+		lox::stmt_ptr parse_var_declaration();
+
+		lox::stmt_ptr parse_declaration();
+
+		std::vector<lox::stmt_ptr> parse();
 	};
 }
 

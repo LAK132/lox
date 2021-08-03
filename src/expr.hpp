@@ -13,6 +13,12 @@ namespace lox
 	{
 		using expr_ptr = std::unique_ptr<lox::expr>;
 
+		struct assign
+		{
+			lox::token name;
+			expr_ptr value;
+		};
+
 		struct binary
 		{
 			expr_ptr left;
@@ -36,12 +42,19 @@ namespace lox
 			expr_ptr right;
 		};
 
-		std::variant<binary, grouping, literal, unary> value;
+		struct variable
+		{
+			lox::token name;
+		};
 
+		std::variant<assign, binary, grouping, literal, unary, variable> value;
+
+		static expr_ptr make_assign(assign &&expr);
 		static expr_ptr make_binary(binary &&expr);
 		static expr_ptr make_grouping(grouping &&expr);
 		static expr_ptr make_literal(literal &&expr);
 		static expr_ptr make_unary(unary &&expr);
+		static expr_ptr make_variable(variable &&expr);
 
 		template<typename F>
 		inline auto visit(F &&f)

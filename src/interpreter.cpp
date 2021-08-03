@@ -8,6 +8,7 @@
 #include "scanner.hpp"
 #include "string_hacks.hpp"
 
+#include <cassert>
 #include <iostream>
 
 void lox::interpreter::report(size_t line,
@@ -36,34 +37,56 @@ void lox::interpreter::error(size_t line, std::u8string_view message)
 
 std::u8string lox::interpreter::interpret(const lox::expr &expr)
 {
-	std::optional<lox::object> result = expr.visit(lox::evaluator{*this});
+	std::optional<lox::object> result = expr.visit(lox::evaluator(*this));
 	return result ? result->to_string() : u8"";
 }
 
-int lox::interpreter::run(std::u8string_view file)
+std::optional<std::u8string> lox::interpreter::interpret(const lox::stmt &stmt)
 {
+	return stmt.visit(lox::evaluator(*this));
+}
+
+std::optional<std::u8string> lox::interpreter::interpret(
+  std::span<const lox::stmt_ptr> stmts)
+{
+	std::u8string str;
+
+	for (const auto &stmt : stmts)
+	{
+		if (!stmt) return std::nullopt;
+
+		std::optional<std::u8string> result = interpret(*stmt);
+		if (had_error || !result) return std::nullopt;
+		str += *result;
+	}
+
+	return str;
+}
+
+int lox::interpreter::run(std::u8string_view file, std::u8string *out_str)
+{
+	assert(global_environment);
+
 	lox::scanner scanner{*this, file};
 	auto tokens = scanner.scan_tokens();
 	if (had_error) return EXIT_FAILURE;
 
 	lox::parser parser{*this, std::move(tokens)};
 
-	while (!parser.empty())
-	{
-		lox::expr_ptr expr = parser.parse();
-		if (had_error || !expr) return EXIT_FAILURE;
+	std::vector<lox::stmt_ptr> stmts = parser.parse();
+	if (had_error) return EXIT_FAILURE;
 
-		std::u8string result = interpret(*expr);
-		if (had_error) return EXIT_FAILURE;
+	std::optional<std::u8string> result = interpret(stmts);
+	if (had_error || !result) return EXIT_FAILURE;
 
-		std::cout << lox::as_astring_view(result) << "\n";
-	}
+	if (out_str) *out_str += *result;
 
 	return EXIT_SUCCESS;
 }
 
 int lox::interpreter::run_file(const std::filesystem::path &file_path)
 {
+	global_environment = lox::environment::make();
 	return std::visit(
 	  overloaded{[&](const std::error_code &err) -> int
 	             {
@@ -77,6 +100,7 @@ int lox::interpreter::run_file(const std::filesystem::path &file_path)
 
 int lox::interpreter::run_prompt()
 {
+	global_environment = lox::environment::make();
 	for (bool running = true; running;)
 	{
 		std::cout << "> ";
@@ -85,7 +109,9 @@ int lox::interpreter::run_prompt()
 		if (!std::cin.good()) break;
 		if (string.empty()) break;
 		string += "\n";
-		run(lox::as_u8string_view(string));
+		std::u8string out;
+		run(lox::as_u8string_view(string), &out);
+		std::cout << lox::as_astring_view(out);
 		had_error = false;
 	}
 	std::cout << "\n";
