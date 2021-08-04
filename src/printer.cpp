@@ -48,6 +48,12 @@ std::u8string lox::prefix_ast_printer_t::operator()(
 }
 
 std::u8string lox::prefix_ast_printer_t::operator()(
+  const lox::expr::logical &expr) const
+{
+	return parenthesize(expr.op.lexeme, {expr.left.get(), expr.right.get()});
+}
+
+std::u8string lox::prefix_ast_printer_t::operator()(
   const lox::expr::unary &expr) const
 {
 	return parenthesize(expr.op.lexeme, {expr.right.get()});
@@ -99,6 +105,12 @@ std::u8string lox::postfix_ast_printer_t::operator()(
   const lox::expr::literal &expr) const
 {
 	return expr.value.to_string();
+}
+
+std::u8string lox::postfix_ast_printer_t::operator()(
+  const lox::expr::logical &expr) const
+{
+	return common(expr.op.lexeme, {expr.left.get(), expr.right.get()});
 }
 
 std::u8string lox::postfix_ast_printer_t::operator()(

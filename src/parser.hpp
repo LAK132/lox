@@ -47,6 +47,10 @@ namespace lox
 
 		lox::expr_ptr parse_equality();
 
+		lox::expr_ptr parse_and();
+
+		lox::expr_ptr parse_or();
+
 		lox::expr_ptr parse_assignment();
 
 		lox::expr_ptr parse_expression();
@@ -56,6 +60,12 @@ namespace lox
 		lox::stmt_ptr parse_expression_statement();
 
 		std::optional<std::vector<lox::stmt_ptr>> parse_block();
+
+		lox::stmt_ptr parse_branch_statement();
+
+		lox::stmt_ptr parse_while_loop_statement();
+
+		lox::stmt_ptr parse_for_loop_statement();
 
 		lox::stmt_ptr parse_statement();
 

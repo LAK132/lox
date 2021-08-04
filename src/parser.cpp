@@ -203,9 +203,51 @@ lox::expr_ptr lox::parser::parse_equality()
 	return e;
 }
 
-lox::expr_ptr lox::parser::parse_assignment()
+lox::expr_ptr lox::parser::parse_and()
 {
 	lox::expr_ptr expr = parse_equality();
+	if (!expr) return lox::expr_ptr{};
+
+	while (match({lox::token_type::AND}))
+	{
+		lox::token op       = last();
+		lox::expr_ptr right = parse_equality();
+		if (!right) return lox::expr_ptr{};
+
+		expr = lox::expr::make_logical({
+		  .left  = std::move(expr),
+		  .op    = op,
+		  .right = std::move(right),
+		});
+	}
+
+	return expr;
+}
+
+lox::expr_ptr lox::parser::parse_or()
+{
+	lox::expr_ptr expr = parse_and();
+	if (!expr) return lox::expr_ptr{};
+
+	while (match({lox::token_type::OR}))
+	{
+		lox::token op       = last();
+		lox::expr_ptr right = parse_and();
+		if (!right) return lox::expr_ptr{};
+
+		expr = lox::expr::make_logical({
+		  .left  = std::move(expr),
+		  .op    = op,
+		  .right = std::move(right),
+		});
+	}
+
+	return expr;
+}
+
+lox::expr_ptr lox::parser::parse_assignment()
+{
+	lox::expr_ptr expr = parse_or();
 	if (!expr) return lox::expr_ptr{};
 
 	if (match({lox::token_type::EQUAL}))
@@ -267,9 +309,137 @@ std::optional<std::vector<lox::stmt_ptr>> lox::parser::parse_block()
 	return result;
 }
 
+lox::stmt_ptr lox::parser::parse_branch_statement()
+{
+	if (!consume(lox::token_type::LEFT_PAREN, u8"Expected '(' after 'if'."))
+		return lox::stmt_ptr{};
+
+	lox::expr_ptr condition = parse_expression();
+	if (!condition) return lox::stmt_ptr{};
+
+	if (!consume(lox::token_type::RIGHT_PAREN,
+	             u8"Expected '(' after if condition."))
+		return lox::stmt_ptr{};
+
+	lox::stmt_ptr then_branch = parse_statement();
+	if (!then_branch) return lox::stmt_ptr{};
+
+	lox::stmt_ptr else_branch;
+	if (match({lox::token_type::ELSE}))
+	{
+		else_branch = parse_statement();
+		if (!else_branch) return lox::stmt_ptr{};
+	}
+
+	return lox::stmt::make_branch({
+	  .condition  = std::move(condition),
+	  .then_brach = std::move(then_branch),
+	  .else_brach = std::move(else_branch),
+	});
+}
+
+lox::stmt_ptr lox::parser::parse_while_loop_statement()
+{
+	if (!consume(lox::token_type::LEFT_PAREN, u8"Expected '(' after 'while'."))
+		return lox::stmt_ptr{};
+
+	lox::expr_ptr condition = parse_expression();
+	if (!condition) return lox::stmt_ptr{};
+
+	if (!consume(lox::token_type::RIGHT_PAREN,
+	             u8"Expected ')' after condition."))
+		return lox::stmt_ptr{};
+
+	lox::stmt_ptr body = parse_statement();
+	if (!body) return lox::stmt_ptr{};
+
+	return lox::stmt::make_loop({
+	  .condition = std::move(condition),
+	  .body      = std::move(body),
+	});
+}
+
+lox::stmt_ptr lox::parser::parse_for_loop_statement()
+{
+	if (!consume(lox::token_type::LEFT_PAREN, u8"Expected '(' after 'for'."))
+		return lox::stmt_ptr{};
+
+	lox::stmt_ptr init;
+	if (match({lox::token_type::VAR}))
+	{
+		init = parse_var_declaration();
+		if (!init) return lox::stmt_ptr{};
+	}
+	else if (!match({lox::token_type::SEMICOLON})) // NOT a semicolon
+	{
+		init = parse_expression_statement();
+		if (!init) return lox::stmt_ptr{};
+	}
+
+	lox::expr_ptr condition;
+	if (!check(lox::token_type::SEMICOLON))
+	{
+		condition = parse_expression();
+		if (!condition) return lox::stmt_ptr{};
+	}
+	if (!consume(lox::token_type::SEMICOLON,
+	             u8"Expected ';' after loop condition."))
+		return lox::stmt_ptr{};
+
+	lox::expr_ptr increment;
+	if (!check(lox::token_type::RIGHT_PAREN))
+	{
+		increment = parse_expression();
+		if (!increment) return lox::stmt_ptr{};
+	}
+	if (!consume(lox::token_type::RIGHT_PAREN,
+	             u8"Expected ')' after for clauses."))
+		return lox::stmt_ptr{};
+
+	lox::stmt_ptr body = parse_statement();
+	if (!body) return lox::stmt_ptr{};
+
+	if (increment)
+	{
+		std::vector<lox::stmt_ptr> statements;
+		statements.push_back(std::move(body));
+		statements.push_back(
+		  lox::stmt::make_expr({.expression = std::move(increment)}));
+
+		body = lox::stmt::make_block({.statements = std::move(statements)});
+	}
+
+	if (!condition)
+		condition = lox::expr::make_literal({
+		  .value = true,
+		});
+
+	body = lox::stmt::make_loop({
+	  .condition = std::move(condition),
+	  .body      = std::move(body),
+	});
+
+	if (init)
+	{
+		std::vector<lox::stmt_ptr> statements;
+		statements.push_back(std::move(init));
+		statements.push_back(std::move(body));
+
+		body = lox::stmt::make_block({.statements = std::move(statements)});
+	}
+
+	return body;
+}
+
 lox::stmt_ptr lox::parser::parse_statement()
 {
+	if (match({lox::token_type::FOR})) return parse_for_loop_statement();
+
+	if (match({lox::token_type::IF})) return parse_branch_statement();
+
 	if (match({lox::token_type::PRINT})) return parse_print_statement();
+
+	if (match({lox::token_type::WHILE})) return parse_while_loop_statement();
 
 	if (match({lox::token_type::LEFT_BRACE}))
 	{

@@ -139,6 +139,25 @@ std::optional<lox::object> lox::evaluator::operator()(
 }
 
 std::optional<lox::object> lox::evaluator::operator()(
+  const lox::expr::logical &expr)
+{
+	std::optional<lox::object> maybe_left = expr.left->visit(*this);
+	if (!maybe_left) return std::nullopt;
+	const auto &left = *maybe_left;
+
+	if (expr.op.type == lox::token_type::OR)
+	{
+		if (left.is_truthy()) return left;
+	}
+	else
+	{
+		if (!left.is_truthy()) return left;
+	}
+
+	return expr.right->visit(*this);
+}
+
+std::optional<lox::object> lox::evaluator::operator()(
   const lox::expr::unary &expr)
 {
 	std::optional<lox::object> maybe_right = expr.right->visit(*this);
@@ -197,6 +216,19 @@ std::optional<std::u8string> lox::evaluator::operator()(
 }
 
 std::optional<std::u8string> lox::evaluator::operator()(
+  const lox::stmt::branch &stmt)
+{
+	if (auto condition = stmt.condition->visit(*this); !condition)
+		return std::nullopt;
+	else if (condition->is_truthy())
+		return stmt.then_brach->visit(*this);
+	else if (stmt.else_brach)
+		return stmt.else_brach->visit(*this);
+	else
+		return std::make_optional<std::u8string>();
+}
+
+std::optional<std::u8string> lox::evaluator::operator()(
   const lox::stmt::print &stmt)
 {
 	std::optional<lox::object> maybe_value = stmt.expression->visit(*this);
@@ -222,4 +254,24 @@ std::optional<std::u8string> lox::evaluator::operator()(
 	}
 
 	return std::make_optional<std::u8string>();
+}
+
+std::optional<std::u8string> lox::evaluator::operator()(
+  const lox::stmt::loop &stmt)
+{
+	std::optional<lox::object> maybe_condition = stmt.condition->visit(*this);
+
+	std::u8string result;
+
+	for (; maybe_condition && maybe_condition->is_truthy();
+	     maybe_condition = stmt.condition->visit(*this))
+	{
+		std::optional<std::u8string> maybe_body = stmt.body->visit(*this);
+		if (!maybe_body) return std::nullopt;
+		result += *maybe_body;
+	}
+
+	if (!maybe_condition) return std::nullopt;
+
+	return result;
 }

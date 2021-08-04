@@ -23,6 +23,13 @@ namespace lox
 			lox::expr_ptr expression;
 		};
 
+		struct branch
+		{
+			lox::expr_ptr condition;
+			stmt_ptr then_brach;
+			stmt_ptr else_brach;
+		};
+
 		struct print
 		{
 			lox::expr_ptr expression;
@@ -34,12 +41,20 @@ namespace lox
 			lox::expr_ptr init;
 		};
 
-		std::variant<block, expr, print, var> value;
+		struct loop
+		{
+			lox::expr_ptr condition;
+			stmt_ptr body;
+		};
+
+		std::variant<block, expr, branch, print, var, loop> value;
 
 		static stmt_ptr make_block(block &&stmt);
 		static stmt_ptr make_expr(expr &&stmt);
+		static stmt_ptr make_branch(branch &&stmt);
 		static stmt_ptr make_print(print &&stmt);
 		static stmt_ptr make_var(var &&stmt);
+		static stmt_ptr make_loop(loop &&stmt);
 
 		template<typename F>
 		inline auto visit(F &&f)

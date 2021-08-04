@@ -36,6 +36,13 @@ namespace lox
 			lox::object value;
 		};
 
+		struct logical
+		{
+			expr_ptr left;
+			lox::token op;
+			expr_ptr right;
+		};
+
 		struct unary
 		{
 			lox::token op;
@@ -47,12 +54,14 @@ namespace lox
 			lox::token name;
 		};
 
-		std::variant<assign, binary, grouping, literal, unary, variable> value;
+		std::variant<assign, binary, grouping, literal, logical, unary, variable>
+		  value;
 
 		static expr_ptr make_assign(assign &&expr);
 		static expr_ptr make_binary(binary &&expr);
 		static expr_ptr make_grouping(grouping &&expr);
 		static expr_ptr make_literal(literal &&expr);
+		static expr_ptr make_logical(logical &&expr);
 		static expr_ptr make_unary(unary &&expr);
 		static expr_ptr make_variable(variable &&expr);
 

@@ -16,6 +16,7 @@ namespace lox
 		std::u8string operator()(const lox::expr::binary &expr) const;
 		std::u8string operator()(const lox::expr::grouping &expr) const;
 		std::u8string operator()(const lox::expr::literal &expr) const;
+		std::u8string operator()(const lox::expr::logical &expr) const;
 		std::u8string operator()(const lox::expr::unary &expr) const;
 		std::u8string operator()(const lox::expr::variable &expr) const;
 	};
@@ -30,6 +31,7 @@ namespace lox
 		std::u8string operator()(const lox::expr::binary &expr) const;
 		std::u8string operator()(const lox::expr::grouping &expr) const;
 		std::u8string operator()(const lox::expr::literal &expr) const;
+		std::u8string operator()(const lox::expr::logical &expr) const;
 		std::u8string operator()(const lox::expr::unary &expr) const;
 		std::u8string operator()(const lox::expr::variable &expr) const;
 	};

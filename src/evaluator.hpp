@@ -28,13 +28,16 @@ namespace lox
 		std::optional<lox::object> operator()(const lox::expr::binary &expr);
 		std::optional<lox::object> operator()(const lox::expr::grouping &expr);
 		std::optional<lox::object> operator()(const lox::expr::literal &expr);
+		std::optional<lox::object> operator()(const lox::expr::logical &expr);
 		std::optional<lox::object> operator()(const lox::expr::unary &expr);
 		std::optional<lox::object> operator()(const lox::expr::variable &expr);
 
 		std::optional<std::u8string> operator()(const lox::stmt::block &stmt);
 		std::optional<std::u8string> operator()(const lox::stmt::expr &stmt);
+		std::optional<std::u8string> operator()(const lox::stmt::branch &stmt);
 		std::optional<std::u8string> operator()(const lox::stmt::print &stmt);
 		std::optional<std::u8string> operator()(const lox::stmt::var &stmt);
+		std::optional<std::u8string> operator()(const lox::stmt::loop &stmt);
 	};
 }
 
