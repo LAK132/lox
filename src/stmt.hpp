@@ -26,8 +26,8 @@ namespace lox
 		struct branch
 		{
 			lox::expr_ptr condition;
-			stmt_ptr then_brach;
-			stmt_ptr else_brach;
+			stmt_ptr then_branch;
+			stmt_ptr else_branch;
 		};
 
 		struct print

@@ -264,9 +264,9 @@ std::optional<std::u8string> lox::evaluator::operator()(
 	if (auto condition = stmt.condition->visit(*this); !condition)
 		return std::nullopt;
 	else if (condition->is_truthy())
-		return stmt.then_brach->visit(*this);
-	else if (stmt.else_brach)
-		return stmt.else_brach->visit(*this);
+		return stmt.then_branch->visit(*this);
+	else if (stmt.else_branch)
+		return stmt.else_branch->visit(*this);
 	else
 		return std::make_optional<std::u8string>();
 }

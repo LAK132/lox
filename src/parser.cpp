@@ -441,9 +441,9 @@ lox::stmt_ptr lox::parser::parse_branch_statement()
 	}
 
 	return lox::stmt::make_branch({
-	  .condition  = std::move(condition),
-	  .then_brach = std::move(then_branch),
-	  .else_brach = std::move(else_branch),
+	  .condition   = std::move(condition),
+	  .then_branch = std::move(then_branch),
+	  .else_branch = std::move(else_branch),
 	});
 }
 
