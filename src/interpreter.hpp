@@ -34,6 +34,8 @@ namespace lox
 		std::optional<std::u8string> interpret(
 		  std::span<const lox::stmt_ptr> stmts);
 
+		void init_globals();
+
 		int run(std::u8string_view file, std::u8string *out_str = nullptr);
 
 		int run_file(const std::filesystem::path &file_path);

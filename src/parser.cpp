@@ -97,6 +97,51 @@ lox::expr_ptr lox::parser::parse_primary()
 	return lox::expr_ptr{};
 }
 
+lox::expr_ptr lox::parser::parse_call()
+{
+	auto finish_call = [&](lox::expr_ptr &&callee) -> lox::expr_ptr
+	{
+		std::vector<lox::expr_ptr> arguments;
+		if (!check(lox::token_type::RIGHT_PAREN))
+		{
+			do
+			{
+				if (arguments.size() >= 255)
+				{
+					interpreter.error(peek(), u8"Can't have more than 255 arguments.");
+					return lox::expr_ptr{};
+				}
+				lox::expr_ptr argument = parse_expression();
+				if (!argument) return lox::expr_ptr{};
+
+				arguments.push_back(std::move(argument));
+			} while (match({lox::token_type::COMMA}));
+		}
+
+		const lox::token *paren =
+		  consume(lox::token_type::RIGHT_PAREN, u8"Expected ')' after arguments.");
+		if (!paren) return lox::expr_ptr{};
+
+		return lox::expr::make_call({
+		  .callee    = std::move(callee),
+		  .paren     = *paren,
+		  .arguments = std::move(arguments),
+		});
+	};
+
+	lox::expr_ptr expr = parse_primary();
+
+	for (;;)
+	{
+		if (!match({lox::token_type::LEFT_PAREN})) break;
+
+		expr = finish_call(std::move(expr));
+		if (!expr) return lox::expr_ptr{};
+	}
+
+	return expr;
+}
+
 lox::expr_ptr lox::parser::parse_unary()
 {
 	using enum lox::token_type;
@@ -112,7 +157,7 @@ lox::expr_ptr lox::parser::parse_unary()
 		});
 	}
 
-	return parse_primary();
+	return parse_call();
 }
 
 lox::expr_ptr lox::parser::parse_factor()
@@ -284,12 +329,76 @@ lox::stmt_ptr lox::parser::parse_print_statement()
 	return lox::stmt::make_print({.expression = std::move(value)});
 }
 
+lox::stmt_ptr lox::parser::parse_return_statement()
+{
+	lox::token keyword = last();
+	lox::expr_ptr value =
+	  check(lox::token_type::SEMICOLON) ? lox::expr_ptr{} : parse_expression();
+
+	if (!consume(lox::token_type::SEMICOLON,
+	             u8"Expected ';' after return value."))
+		return lox::stmt_ptr{};
+
+	return lox::stmt::make_ret({
+	  .keyword = keyword,
+	  .value   = std::move(value),
+	});
+}
+
 lox::stmt_ptr lox::parser::parse_expression_statement()
 {
 	lox::expr_ptr expr = parse_expression();
 	if (!consume(lox::token_type::SEMICOLON, u8"Expected ';' after expression."))
 		return lox::stmt_ptr{};
 	return lox::stmt::make_expr({.expression = std::move(expr)});
+}
+
+lox::stmt_ptr lox::parser::parse_function(const std::u8string &kind)
+{
+	const lox::token *name =
+	  consume(lox::token_type::IDENTIFIER, u8"Expected " + kind + u8" name.");
+	if (!name) return lox::stmt_ptr{};
+
+	if (!consume(lox::token_type::LEFT_PAREN,
+	             u8"Expected '(' after " + kind + u8" name."))
+		return lox::stmt_ptr{};
+
+	std::vector<lox::token> parameters;
+	if (!check(lox::token_type::RIGHT_PAREN))
+	{
+		do
+		{
+			if (parameters.size() >= 255)
+			{
+				interpreter.error(peek(), u8"Can't have more than 255 parameters.");
+				return lox::stmt_ptr{};
+			}
+
+			if (const lox::token *param =
+			      consume(lox::token_type::IDENTIFIER, u8"Expected parameter name.");
+			    param)
+				parameters.emplace_back(*param);
+			else
+				return lox::stmt_ptr{};
+		} while (match({lox::token_type::COMMA}));
+	}
+
+	if (!consume(lox::token_type::RIGHT_PAREN,
+	             u8"Expected '(' after parameters."))
+		return lox::stmt_ptr{};
+
+	if (!consume(lox::token_type::LEFT_BRACE,
+	             u8"Expected '{' before " + kind + u8" body."))
+		return lox::stmt_ptr{};
+
+	std::optional<std::vector<lox::stmt_ptr>> maybe_body = parse_block();
+	if (!maybe_body) return lox::stmt_ptr{};
+
+	return lox::stmt::make_function({
+	  .name       = *name,
+	  .parameters = std::move(parameters),
+	  .body       = std::move(*maybe_body),
+	});
 }
 
 std::optional<std::vector<lox::stmt_ptr>> lox::parser::parse_block()
@@ -439,6 +548,8 @@ lox::stmt_ptr lox::parser::parse_statement()
 
 	if (match({lox::token_type::PRINT})) return parse_print_statement();
 
+	if (match({lox::token_type::RETURN})) return parse_return_statement();
+
 	if (match({lox::token_type::WHILE})) return parse_while_loop_statement();
 
 	if (match({lox::token_type::LEFT_BRACE}))
@@ -476,7 +587,9 @@ lox::stmt_ptr lox::parser::parse_declaration()
 {
 	auto result = [&]()
 	{
-		if (match({lox::token_type::VAR}))
+		if (match({lox::token_type::FUN}))
+			return parse_function(u8"function");
+		else if (match({lox::token_type::VAR}))
 			return parse_var_declaration();
 		else
 			return parse_statement();

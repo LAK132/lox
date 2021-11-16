@@ -19,6 +19,8 @@ namespace lox
 
 		using iterator = typename decltype(values)::iterator;
 
+		iterator emplace(std::u8string_view k, lox::object v);
+
 		iterator emplace(const lox::token &k, lox::object v);
 
 		iterator find(const lox::token &k);

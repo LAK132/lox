@@ -37,6 +37,8 @@ namespace lox
 
 		lox::expr_ptr parse_primary();
 
+		lox::expr_ptr parse_call();
+
 		lox::expr_ptr parse_unary();
 
 		lox::expr_ptr parse_factor();
@@ -57,7 +59,11 @@ namespace lox
 
 		lox::stmt_ptr parse_print_statement();
 
+		lox::stmt_ptr parse_return_statement();
+
 		lox::stmt_ptr parse_expression_statement();
+
+		lox::stmt_ptr parse_function(const std::u8string &kind);
 
 		std::optional<std::vector<lox::stmt_ptr>> parse_block();
 

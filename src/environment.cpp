@@ -1,9 +1,15 @@
 #include "environment.hpp"
 
+lox::environment::iterator lox::environment::emplace(std::u8string_view k,
+                                                     lox::object v)
+{
+	return values.insert_or_assign(std::u8string(k), std::move(v)).first;
+}
+
 lox::environment::iterator lox::environment::emplace(const lox::token &k,
                                                      lox::object v)
 {
-	return values.insert_or_assign(std::u8string(k.lexeme), std::move(v)).first;
+	return emplace(k.lexeme, std::move(v));
 }
 
 lox::environment::iterator lox::environment::find(const lox::token &k)

@@ -1,4 +1,5 @@
 lox = files([
+  'callable.cpp',
   'environment.cpp',
   'evaluator.cpp',
   'expr.cpp',

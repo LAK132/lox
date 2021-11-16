@@ -47,7 +47,23 @@ namespace lox
 			stmt_ptr body;
 		};
 
-		std::variant<block, expr, branch, print, var, loop> value;
+		struct function
+		{
+			lox::token name;
+			std::vector<lox::token> parameters;
+			std::vector<stmt_ptr> body;
+		};
+		using function_ptr = std::shared_ptr<function>;
+
+		struct ret
+		{
+			lox::token keyword;
+			lox::expr_ptr value;
+		};
+
+		using value_type =
+		  std::variant<block, expr, branch, print, var, loop, function_ptr, ret>;
+		value_type value;
 
 		static stmt_ptr make_block(block &&stmt);
 		static stmt_ptr make_expr(expr &&stmt);
@@ -55,6 +71,8 @@ namespace lox
 		static stmt_ptr make_print(print &&stmt);
 		static stmt_ptr make_var(var &&stmt);
 		static stmt_ptr make_loop(loop &&stmt);
+		static stmt_ptr make_function(function &&stmt);
+		static stmt_ptr make_ret(ret &&stmt);
 
 		template<typename F>
 		inline auto visit(F &&f)

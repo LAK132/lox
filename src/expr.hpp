@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <variant>
+#include <vector>
 
 namespace lox
 {
@@ -24,6 +25,13 @@ namespace lox
 			expr_ptr left;
 			lox::token op;
 			expr_ptr right;
+		};
+
+		struct call
+		{
+			expr_ptr callee;
+			lox::token paren;
+			std::vector<expr_ptr> arguments;
 		};
 
 		struct grouping
@@ -54,11 +62,19 @@ namespace lox
 			lox::token name;
 		};
 
-		std::variant<assign, binary, grouping, literal, logical, unary, variable>
+		std::variant<assign,
+		             binary,
+		             call,
+		             grouping,
+		             literal,
+		             logical,
+		             unary,
+		             variable>
 		  value;
 
 		static expr_ptr make_assign(assign &&expr);
 		static expr_ptr make_binary(binary &&expr);
+		static expr_ptr make_call(call &&expr);
 		static expr_ptr make_grouping(grouping &&expr);
 		static expr_ptr make_literal(literal &&expr);
 		static expr_ptr make_logical(logical &&expr);

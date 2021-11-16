@@ -1,5 +1,6 @@
 #include "interpreter.hpp"
 
+#include "callable.hpp"
 #include "evaluator.hpp"
 #include "lox.hpp"
 #include "overloaded.hpp"
@@ -9,6 +10,7 @@
 #include "string_hacks.hpp"
 
 #include <cassert>
+#include <chrono>
 #include <iostream>
 
 void lox::interpreter::report(size_t line,
@@ -63,6 +65,37 @@ std::optional<std::u8string> lox::interpreter::interpret(
 	return str;
 }
 
+std::optional<lox::object> (*lox_clock)(lox::interpreter &) =
+  [](lox::interpreter &) -> std::optional<lox::object> {
+	return lox::object{std::chrono::duration_cast<std::chrono::milliseconds>(
+	                     std::chrono::system_clock::now().time_since_epoch())
+	                     .count() /
+	                   1000.0};
+};
+
+std::optional<lox::object> (*lox_to_string)(lox::interpreter &,
+                                            lox::object &&) =
+  [](lox::interpreter &, lox::object &&obj) -> std::optional<lox::object> {
+	return lox::object{obj.to_string()};
+};
+
+void lox::interpreter::init_globals()
+{
+	global_environment = lox::environment::make();
+
+	global_environment->emplace(
+	  u8"clock",
+	  lox::object{
+	    std::make_shared<lox::callable>(LOX_CALLABLE_MAKE_NATIVE(lox_clock)),
+	  });
+
+	global_environment->emplace(
+	  u8"to_string",
+	  lox::object{
+	    std::make_shared<lox::callable>(LOX_CALLABLE_MAKE_NATIVE(lox_to_string)),
+	  });
+}
+
 int lox::interpreter::run(std::u8string_view file, std::u8string *out_str)
 {
 	assert(global_environment);
@@ -86,7 +119,7 @@ int lox::interpreter::run(std::u8string_view file, std::u8string *out_str)
 
 int lox::interpreter::run_file(const std::filesystem::path &file_path)
 {
-	global_environment = lox::environment::make();
+	init_globals();
 	return std::visit(
 	  overloaded{[&](const std::error_code &err) -> int
 	             {
@@ -100,7 +133,7 @@ int lox::interpreter::run_file(const std::filesystem::path &file_path)
 
 int lox::interpreter::run_prompt()
 {
-	global_environment = lox::environment::make();
+	init_globals();
 	for (bool running = true; running;)
 	{
 		std::cout << "> ";

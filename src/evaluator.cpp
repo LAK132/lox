@@ -1,5 +1,7 @@
 #include "evaluator.hpp"
 
+#include "callable.hpp"
+
 #include <iostream>
 
 std::nullopt_t lox::evaluator::error(const lox::token &token,
@@ -7,6 +9,26 @@ std::nullopt_t lox::evaluator::error(const lox::token &token,
 {
 	interpreter.error(token, message);
 	return std::nullopt;
+}
+
+std::optional<std::u8string> lox::evaluator::execute_block(
+  std::span<const lox::stmt_ptr> statements, const lox::environment_ptr &env)
+{
+	lox::environment_ptr previous = std::exchange(environment, env);
+
+	for (const auto &s : statements)
+	{
+		if (!s || !s->visit(*this))
+		{
+			environment = previous;
+			return std::nullopt;
+		}
+
+		if (block_ret_value) break;
+	}
+
+	environment = previous;
+	return std::make_optional<std::u8string>();
 }
 
 std::optional<lox::object> lox::evaluator::operator()(
@@ -39,9 +61,9 @@ std::optional<lox::object> lox::evaluator::operator()(
 	{
 		using enum lox::token_type;
 
-		case EQUAL_EQUAL: return lox::object{.value = left == right};
+		case EQUAL_EQUAL: return lox::object{left == right};
 
-		case BANG_EQUAL: return lox::object{.value = left != right};
+		case BANG_EQUAL: return lox::object{left != right};
 
 		case GREATER:
 		{
@@ -49,7 +71,7 @@ std::optional<lox::object> lox::evaluator::operator()(
 			auto right_num = right.get_number();
 			if (!left_num || !right_num)
 				return error(expr.op, u8"Operands must be numbers.");
-			return lox::object{.value = *left_num > *right_num};
+			return lox::object{*left_num > *right_num};
 		}
 
 		case GREATER_EQUAL:
@@ -58,7 +80,7 @@ std::optional<lox::object> lox::evaluator::operator()(
 			auto right_num = right.get_number();
 			if (!left_num || !right_num)
 				return error(expr.op, u8"Operands must be numbers.");
-			return lox::object{.value = *left_num >= *right_num};
+			return lox::object{*left_num >= *right_num};
 		}
 
 		case LESS:
@@ -67,7 +89,7 @@ std::optional<lox::object> lox::evaluator::operator()(
 			auto right_num = right.get_number();
 			if (!left_num || !right_num)
 				return error(expr.op, u8"Operands must be numbers.");
-			return lox::object{.value = *left_num < *right_num};
+			return lox::object{*left_num < *right_num};
 		}
 
 		case LESS_EQUAL:
@@ -76,7 +98,7 @@ std::optional<lox::object> lox::evaluator::operator()(
 			auto right_num = right.get_number();
 			if (!left_num || !right_num)
 				return error(expr.op, u8"Operands must be numbers.");
-			return lox::object{.value = *left_num <= *right_num};
+			return lox::object{*left_num <= *right_num};
 		}
 
 		case PLUS:
@@ -84,14 +106,13 @@ std::optional<lox::object> lox::evaluator::operator()(
 			{
 				auto left_num  = left.get_number();
 				auto right_num = right.get_number();
-				if (left_num && right_num)
-					return lox::object{.value = *left_num + *right_num};
+				if (left_num && right_num) return lox::object{*left_num + *right_num};
 			}
 			{
 				auto left_string  = left.get_string();
 				auto right_string = right.get_string();
 				if (left_string && right_string)
-					return lox::object{.value = *left_string + *right_string};
+					return lox::object{*left_string + *right_string};
 			}
 			return error(expr.op, u8"Operands must be two numbers or two strings.");
 		}
@@ -102,7 +123,7 @@ std::optional<lox::object> lox::evaluator::operator()(
 			auto right_num = right.get_number();
 			if (!left_num || !right_num)
 				return error(expr.op, u8"Operands must be numbers.");
-			return lox::object{.value = *left_num - *right_num};
+			return lox::object{*left_num - *right_num};
 		}
 
 		case SLASH:
@@ -111,7 +132,7 @@ std::optional<lox::object> lox::evaluator::operator()(
 			auto right_num = right.get_number();
 			if (!left_num || !right_num)
 				return error(expr.op, u8"Operands must be numbers.");
-			return lox::object{.value = *left_num / *right_num};
+			return lox::object{*left_num / *right_num};
 		}
 
 		case STAR:
@@ -120,10 +141,41 @@ std::optional<lox::object> lox::evaluator::operator()(
 			auto right_num = right.get_number();
 			if (!left_num || !right_num)
 				return error(expr.op, u8"Operands must be numbers.");
-			return lox::object{.value = *left_num * *right_num};
+			return lox::object{*left_num * *right_num};
 		}
 	}
 	return lox::object{};
+}
+
+std::optional<lox::object> lox::evaluator::operator()(
+  const lox::expr::call &expr)
+{
+	std::optional<lox::object> maybe_callee = expr.callee->visit(*this);
+	if (!maybe_callee) return std::nullopt;
+
+	const lox::callable *maybe_callable = maybe_callee->get_callable();
+	if (!maybe_callable)
+		return error(expr.paren, u8"Can only call functions and classes.");
+
+	const lox::callable &callable = *maybe_callable;
+
+	std::vector<lox::object> arguments;
+	arguments.reserve(expr.arguments.size());
+	for (const auto &argument : expr.arguments)
+	{
+		std::optional<lox::object> maybe_argument = argument->visit(*this);
+		if (!maybe_argument) return std::nullopt;
+		arguments.push_back(*maybe_argument);
+	}
+
+	if (arguments.size() != callable.arity())
+		return error(
+		  expr.paren,
+		  lox::as_u8string_view("Expected " + std::to_string(callable.arity()) +
+		                        " arguments but got " +
+		                        std::to_string(arguments.size()) + "."));
+
+	return callable(interpreter, std::move(arguments));
 }
 
 std::optional<lox::object> lox::evaluator::operator()(
@@ -168,13 +220,13 @@ std::optional<lox::object> lox::evaluator::operator()(
 	{
 		using enum lox::token_type;
 
-		case BANG: return lox::object{.value = !right.is_truthy()};
+		case BANG: return lox::object{!right.is_truthy()};
 
 		case MINUS:
 		{
 			auto right_num = right.get_number();
 			if (!right_num) return error(expr.op, u8"Operand must be a number.");
-			return lox::object{.value = -*right_num};
+			return lox::object{-*right_num};
 		}
 
 		default: return lox::object{};
@@ -193,17 +245,8 @@ std::optional<lox::object> lox::evaluator::operator()(
 std::optional<std::u8string> lox::evaluator::operator()(
   const lox::stmt::block &stmt)
 {
-	environment = lox::environment::make(environment);
-	for (const auto &s : stmt.statements)
-	{
-		if (!s || !s->visit(*this))
-		{
-			environment = environment->enclosing;
-			return std::nullopt;
-		}
-	}
-	environment = environment->enclosing;
-	return std::make_optional<std::u8string>();
+	return execute_block(std::span(stmt.statements),
+	                     lox::environment::make(environment));
 }
 
 std::optional<std::u8string> lox::evaluator::operator()(
@@ -268,10 +311,34 @@ std::optional<std::u8string> lox::evaluator::operator()(
 	{
 		std::optional<std::u8string> maybe_body = stmt.body->visit(*this);
 		if (!maybe_body) return std::nullopt;
+		if (block_ret_value) break;
 		result += *maybe_body;
 	}
 
 	if (!maybe_condition) return std::nullopt;
 
 	return result;
+}
+
+std::optional<std::u8string> lox::evaluator::operator()(
+  const lox::stmt::function_ptr &stmt)
+{
+	environment->emplace(stmt->name.lexeme,
+	                     lox::object{std::make_shared<lox::callable>(
+	                       lox::callable::make_interpreted({
+	                         .func    = stmt,
+	                         .closure = environment,
+	                       }))});
+	return std::make_optional<std::u8string>();
+}
+
+std::optional<std::u8string> lox::evaluator::operator()(
+  const lox::stmt::ret &stmt)
+{
+	block_ret_value =
+	  stmt.value ? stmt.value->visit(*this) : std::make_optional<lox::object>();
+	if (block_ret_value)
+		return std::make_optional<std::u8string>();
+	else
+		return std::nullopt;
 }

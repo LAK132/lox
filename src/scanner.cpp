@@ -52,7 +52,7 @@ void lox::scanner::add_token(lox::token_type type, lox::object literal)
 {
 	tokens.push_back(lox::token{.type    = type,
 	                            .lexeme  = source.substr(start, current - start),
-	                            .literal = literal,
+	                            .literal = std::move(literal),
 	                            .line    = line});
 }
 
@@ -75,8 +75,7 @@ void lox::scanner::scan_string()
 
 	// trim the surrounding quotes
 	auto value = source.substr(start + 1, (current - 1) - (start + 1));
-	add_token(lox::token_type::STRING,
-	          lox::object{.value = std::u8string(value)});
+	add_token(lox::token_type::STRING, lox::object{std::u8string(value)});
 }
 
 void lox::scanner::scan_number()
@@ -99,7 +98,7 @@ void lox::scanner::scan_number()
 
 	if (result.ec == std::errc())
 		// no error
-		add_token(lox::token_type::NUMBER, lox::object{.value = number});
+		add_token(lox::token_type::NUMBER, lox::object{number});
 	else
 		interpreter.error(line, u8"Invalid number.");
 }

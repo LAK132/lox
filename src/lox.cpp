@@ -27,6 +27,6 @@ std::variant<std::u8string, std::error_code> lox::read_file(
 
 int lox::usage()
 {
-	std::cout << "Usage: lox [script]";
+	std::cout << "Usage: lox [script]\n";
 	return EXIT_FAILURE;
 }

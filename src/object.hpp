@@ -5,14 +5,34 @@
 #include "string_hacks.hpp"
 
 #include <iostream>
+#include <memory>
 #include <string_view>
 #include <variant>
 
 namespace lox
 {
+	struct callable;
+
 	struct object
 	{
-		std::variant<std::monostate, std::u8string, double, bool> value;
+		using callable_ref = std::shared_ptr<callable>;
+		using value_type =
+		  std::variant<std::monostate, std::u8string, double, bool, callable_ref>;
+
+		value_type value;
+
+		// move these to the .cpp so we have access to the complete callable type
+		object();
+		object(const object &);
+		object(object &&);
+		~object();
+		object &operator=(const object &);
+		object &operator=(object &&);
+
+		object(const value_type &v);
+		object(value_type &&v);
+		object &operator=(const value_type &v);
+		object &operator=(value_type &&v);
 
 		std::u8string to_string() const;
 
@@ -23,6 +43,8 @@ namespace lox
 		const double *get_number() const;
 
 		const bool *get_bool() const;
+
+		const lox::callable *get_callable() const;
 
 		bool operator==(const lox::object &rhs) const;
 
@@ -46,7 +68,6 @@ namespace lox
 			return strm << lox::as_astring_view(obj.to_string());
 		}
 	};
-
 }
 
 #endif

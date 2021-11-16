@@ -36,6 +36,21 @@ std::u8string lox::prefix_ast_printer_t::operator()(
 }
 
 std::u8string lox::prefix_ast_printer_t::operator()(
+  const lox::expr::call &expr) const
+{
+	std::u8string result = u8"(call ";
+	result += expr.callee->visit(*this);
+	for (const auto &arg : expr.arguments)
+	{
+		assert(arg.get() != nullptr);
+		result += u8" ";
+		result += arg->visit(*this);
+	}
+	result += u8")";
+	return result;
+}
+
+std::u8string lox::prefix_ast_printer_t::operator()(
   const lox::expr::grouping &expr) const
 {
 	return parenthesize(u8"group", {expr.expression.get()});
@@ -93,6 +108,20 @@ std::u8string lox::postfix_ast_printer_t::operator()(
   const lox::expr::binary &expr) const
 {
 	return common(expr.op.lexeme, {expr.left.get(), expr.right.get()});
+}
+
+std::u8string lox::postfix_ast_printer_t::operator()(
+  const lox::expr::call &expr) const
+{
+	std::u8string result;
+	for (const auto &arg : expr.arguments)
+	{
+		assert(arg.get() != nullptr);
+		result += arg->visit(*this) + u8" ";
+	}
+	result += expr.callee->visit(*this);
+	result += u8" call";
+	return result;
 }
 
 std::u8string lox::postfix_ast_printer_t::operator()(

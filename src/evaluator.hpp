@@ -16,16 +16,24 @@ namespace lox
 	{
 		lox::interpreter &interpreter;
 		lox::environment_ptr environment;
+		std::optional<lox::object> block_ret_value;
 
 		inline evaluator(lox::interpreter &i)
-		: interpreter(i), environment(i.global_environment)
+		: interpreter(i),
+		  environment(i.global_environment),
+		  block_ret_value(std::nullopt)
 		{
 		}
 
 		std::nullopt_t error(const lox::token &token, std::u8string_view message);
 
+		std::optional<std::u8string> execute_block(
+		  std::span<const lox::stmt_ptr> statements,
+		  const lox::environment_ptr &env);
+
 		std::optional<lox::object> operator()(const lox::expr::assign &expr);
 		std::optional<lox::object> operator()(const lox::expr::binary &expr);
+		std::optional<lox::object> operator()(const lox::expr::call &expr);
 		std::optional<lox::object> operator()(const lox::expr::grouping &expr);
 		std::optional<lox::object> operator()(const lox::expr::literal &expr);
 		std::optional<lox::object> operator()(const lox::expr::logical &expr);
@@ -38,6 +46,9 @@ namespace lox
 		std::optional<std::u8string> operator()(const lox::stmt::print &stmt);
 		std::optional<std::u8string> operator()(const lox::stmt::var &stmt);
 		std::optional<std::u8string> operator()(const lox::stmt::loop &stmt);
+		std::optional<std::u8string> operator()(
+		  const lox::stmt::function_ptr &stmt);
+		std::optional<std::u8string> operator()(const lox::stmt::ret &stmt);
 	};
 }
 

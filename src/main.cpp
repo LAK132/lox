@@ -1,3 +1,4 @@
+#include "callable.hpp"
 #include "interpreter.hpp"
 #include "lox.hpp"
 #include "object.hpp"
@@ -19,7 +20,7 @@ int main(int argc, char *argv[])
 	        .lexeme = u8"-",
 	      },
 	    .right = lox::expr::make_literal({
-	      .value = lox::object{.value = 123.0},
+	      .value = lox::object{123.0},
 	    }),
 	  }),
 	  .op =
@@ -32,6 +33,23 @@ int main(int argc, char *argv[])
 	      .value = 45.67,
 	    }),
 	  }),
+	});
+
+	std::vector<lox::expr_ptr> args;
+	args.push_back(std::move(expr));
+	expr = lox::expr::make_call({
+	  .callee =
+	    lox::expr::make_variable({.name =
+	                                lox::token{
+	                                  .type   = lox::token_type::IDENTIFIER,
+	                                  .lexeme = u8"f",
+	                                }}),
+	  .paren =
+	    lox::token{
+	      .type   = lox::token_type::RIGHT_PAREN,
+	      .lexeme = u8")",
+	    },
+	  .arguments = std::move(args),
 	});
 
 	lox::interpreter interpreter;
