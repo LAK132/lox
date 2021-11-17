@@ -45,6 +45,12 @@ else
   )
 endif
 
+if get_option('buildtype') == 'release'
+  project_args += [
+    '-DNDEBUG',
+  ]
+endif
+
 if cxx.compute_int(cplusplus) < 202002
   error('C++ version insufficient, expected 202002L got ' + cplusplus)
 endif

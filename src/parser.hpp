@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <initializer_list>
+#include <source_location>
 #include <vector>
 
 namespace lox
@@ -30,8 +31,10 @@ namespace lox
 
 		bool match(std::initializer_list<lox::token_type> types);
 
-		const lox::token *consume(lox::token_type type,
-		                          std::u8string_view message_on_err);
+		const lox::token *consume(
+		  lox::token_type type,
+		  std::u8string_view message_on_err,
+		  const std::source_location srcloc = std::source_location::current());
 
 		void sync();
 

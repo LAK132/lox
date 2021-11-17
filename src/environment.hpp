@@ -2,11 +2,11 @@
 #define LOX_ENVIRONMENT_HPP
 
 #include "object.hpp"
+#include "string_map.hpp"
 #include "token.hpp"
 
 #include <memory>
 #include <string>
-#include <unordered_map>
 
 namespace lox
 {
@@ -15,21 +15,21 @@ namespace lox
 		using environment_ptr = std::shared_ptr<environment>;
 
 		environment_ptr enclosing;
-		std::unordered_map<std::u8string, lox::object> values;
+		lox::string_map<char8_t, lox::object> values;
 
-		using iterator = typename decltype(values)::iterator;
+		const lox::object &emplace(std::u8string_view k, lox::object v);
 
-		iterator emplace(std::u8string_view k, lox::object v);
+		const lox::object &emplace(const lox::token &k, lox::object v);
 
-		iterator emplace(const lox::token &k, lox::object v);
+		const lox::object *find(const lox::token &k);
 
-		iterator find(const lox::token &k);
+		const lox::object *find(const lox::token &k, size_t distance);
 
-		iterator replace(const lox::token &k, lox::object v);
+		const lox::object *replace(const lox::token &k, lox::object v);
 
-		inline iterator begin() { return values.begin(); }
-
-		inline iterator end() { return values.end(); }
+		const lox::object *replace(const lox::token &k,
+		                           lox::object v,
+		                           size_t distance);
 
 		static environment_ptr make(environment_ptr enclosing = {});
 	};

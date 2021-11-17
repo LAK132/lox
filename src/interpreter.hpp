@@ -7,6 +7,7 @@
 #include "token.hpp"
 
 #include <filesystem>
+#include <source_location>
 #include <span>
 #include <string>
 #include <string_view>
@@ -18,14 +19,37 @@ namespace lox
 		bool had_error = false;
 
 		lox::environment_ptr global_environment;
+		std::unordered_map<const lox::expr::variable *, size_t> local_declares;
+		std::unordered_map<const lox::expr::assign *, size_t> local_assigns;
 
-		void report(size_t line,
-		            std::u8string_view where,
-		            std::u8string_view message);
+		void report(
+		  size_t line,
+		  std::u8string_view where,
+		  std::u8string_view message,
+		  const std::source_location srcloc = std::source_location::current());
 
-		void error(const lox::token &token, std::u8string_view message);
+		void error(
+		  const lox::token &token,
+		  std::u8string_view message,
+		  const std::source_location srcloc = std::source_location::current());
 
-		void error(size_t line, std::u8string_view message);
+		void error(
+		  size_t line,
+		  std::u8string_view message,
+		  const std::source_location srcloc = std::source_location::current());
+
+		std::optional<lox::object> evaluate(const lox::expr &expr);
+
+		std::optional<std::monostate> execute(const lox::stmt &stmt);
+
+		std::optional<lox::object> execute_block(
+		  std::span<const lox::stmt_ptr> stmts, const lox::environment_ptr &env);
+
+		void resolve(const lox::expr::variable &expr, size_t distance);
+		void resolve(const lox::expr::assign &expr, size_t distance);
+
+		std::optional<size_t> find(const lox::expr::variable &expr);
+		std::optional<size_t> find(const lox::expr::assign &expr);
 
 		std::u8string interpret(const lox::expr &expr);
 

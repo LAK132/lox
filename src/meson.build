@@ -9,6 +9,7 @@ lox = files([
   'object.cpp',
   'parser.cpp',
   'printer.cpp',
+  'resolver.cpp',
   'scanner.cpp',
   'stmt.cpp',
   'string_hacks.cpp',

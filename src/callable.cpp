@@ -70,13 +70,8 @@ std::optional<lox::object> lox::callable::operator()(
 		    for (size_t i = 0; i < c.func->parameters.size(); ++i)
 			    env->emplace(c.func->parameters[i].lexeme, arguments[i]);
 
-		    if (lox::evaluator eval = lox::evaluator{interpreter};
-		        eval.execute_block(std::span<const lox::stmt_ptr>(c.func->body),
-		                           env))
-			    return eval.block_ret_value ? eval.block_ret_value
-			                                : std::make_optional<lox::object>();
-		    else
-			    return std::nullopt;
+		    return interpreter.execute_block(
+		      std::span<const lox::stmt_ptr>(c.func->body), env);
 	    },
 	  },
 	  value);

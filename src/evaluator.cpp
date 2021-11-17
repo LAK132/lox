@@ -5,9 +5,10 @@
 #include <iostream>
 
 std::nullopt_t lox::evaluator::error(const lox::token &token,
-                                     std::u8string_view message)
+                                     std::u8string_view message,
+                                     const std::source_location srcloc)
 {
-	interpreter.error(token, message);
+	interpreter.error(token, message, srcloc);
 	return std::nullopt;
 }
 
@@ -37,13 +38,25 @@ std::optional<lox::object> lox::evaluator::operator()(
 	std::optional<lox::object> maybe_value = expr.value->visit(*this);
 	if (!maybe_value) return std::nullopt;
 
-	if (auto it = environment->replace(expr.name, *maybe_value);
-	    it != environment->end())
-		return it->second;
+	if (std::optional<size_t> maybe_distance = interpreter.find(expr);
+	    maybe_distance)
+	{
+		if (auto it =
+		      environment->replace(expr.name, *maybe_value, *maybe_distance);
+		    it != nullptr)
+			return *it;
+	}
 	else
-		return error(expr.name,
-		             u8"Undefined variable '" + std::u8string(expr.name.lexeme) +
-		               u8"'.");
+	{
+		if (auto it =
+		      interpreter.global_environment->replace(expr.name, *maybe_value);
+		    it != nullptr)
+			return *it;
+	}
+
+	return error(expr.name,
+	             u8"Undefined variable '" + std::u8string(expr.name.lexeme) +
+	               u8"'.");
 }
 
 std::optional<lox::object> lox::evaluator::operator()(
@@ -236,10 +249,26 @@ std::optional<lox::object> lox::evaluator::operator()(
 std::optional<lox::object> lox::evaluator::operator()(
   const lox::expr::variable &expr)
 {
-	if (auto it = environment->find(expr.name); it != environment->end())
-		return it->second;
+	if (std::optional<size_t> maybe_distance = interpreter.find(expr);
+	    maybe_distance)
+	{
+		if (auto it = environment->find(expr.name, *maybe_distance); it != nullptr)
+			return *it;
+		else
+			return error(expr.name,
+			             u8"Undefined local variable '" +
+			               std::u8string(expr.name.lexeme) + u8"'.");
+	}
 	else
-		return std::nullopt;
+	{
+		if (auto it = interpreter.global_environment->find(expr.name);
+		    it != nullptr)
+			return *it;
+		else
+			return error(expr.name,
+			             u8"Undefined global variable '" +
+			               std::u8string(expr.name.lexeme) + u8"'.");
+	}
 }
 
 std::optional<std::u8string> lox::evaluator::operator()(

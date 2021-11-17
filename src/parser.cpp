@@ -42,10 +42,11 @@ bool lox::parser::match(std::initializer_list<lox::token_type> types)
 }
 
 const lox::token *lox::parser::consume(lox::token_type type,
-                                       std::u8string_view message_on_err)
+                                       std::u8string_view message_on_err,
+                                       const std::source_location srcloc)
 {
 	if (check(type)) return &next();
-	interpreter.error(peek(), message_on_err);
+	interpreter.error(peek(), message_on_err, srcloc);
 	return nullptr;
 }
 

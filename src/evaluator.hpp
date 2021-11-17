@@ -8,6 +8,7 @@
 #include "stmt.hpp"
 
 #include <optional>
+#include <source_location>
 #include <string>
 
 namespace lox
@@ -25,7 +26,10 @@ namespace lox
 		{
 		}
 
-		std::nullopt_t error(const lox::token &token, std::u8string_view message);
+		std::nullopt_t error(
+		  const lox::token &token,
+		  std::u8string_view message,
+		  const std::source_location srcloc = std::source_location::current());
 
 		std::optional<std::u8string> execute_block(
 		  std::span<const lox::stmt_ptr> statements,
