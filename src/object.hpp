@@ -12,12 +12,20 @@
 namespace lox
 {
 	struct callable;
+	struct klass;
+	struct instance;
 
 	struct object
 	{
-		using callable_ref = std::shared_ptr<callable>;
-		using value_type =
-		  std::variant<std::monostate, std::u8string, double, bool, callable_ref>;
+		using callable_ref = std::shared_ptr<lox::callable>;
+
+		using value_type = std::variant<std::monostate,
+		                                std::u8string,
+		                                double,
+		                                bool,
+		                                callable_ref,
+		                                std::shared_ptr<lox::klass>,
+		                                std::shared_ptr<lox::instance>>;
 
 		value_type value;
 
@@ -45,6 +53,11 @@ namespace lox
 		const bool *get_bool() const;
 
 		const lox::callable *get_callable() const;
+
+		const lox::klass *get_klass() const;
+
+		lox::instance *get_instance();
+		const lox::instance *get_instance() const;
 
 		bool operator==(const lox::object &rhs) const;
 

@@ -1,6 +1,7 @@
 #include "object.hpp"
 
 #include "callable.hpp"
+#include "klass.hpp"
 #include "string_hacks.hpp"
 
 #include <string>
@@ -65,6 +66,29 @@ const lox::callable *lox::object::get_callable() const
 {
 	return std::holds_alternative<callable_ref>(value)
 	         ? std::get<callable_ref>(value).get()
+	         : (std::holds_alternative<lox::klass_ptr>(value)
+	              ? &std::get<lox::klass_ptr>(value)->constructor
+	              : nullptr);
+}
+
+const lox::klass *lox::object::get_klass() const
+{
+	return std::holds_alternative<lox::klass_ptr>(value)
+	         ? std::get<lox::klass_ptr>(value).get()
+	         : nullptr;
+}
+
+lox::instance *lox::object::get_instance()
+{
+	return std::holds_alternative<lox::instance_ptr>(value)
+	         ? std::get<lox::instance_ptr>(value).get()
+	         : nullptr;
+}
+
+const lox::instance *lox::object::get_instance() const
+{
+	return std::holds_alternative<lox::instance_ptr>(value)
+	         ? std::get<lox::instance_ptr>(value).get()
 	         : nullptr;
 }
 
@@ -83,7 +107,12 @@ bool lox::object::operator==(const lox::object &rhs) const
 	  {
 		  const auto &rc = std::get<callable_ref>(rhs.value);
 		  return *c == *rc;
-	  }});
+	  },
+	  [&](const lox::klass_ptr &k) -> bool
+	  { return k == std::get<lox::klass_ptr>(rhs.value); },
+	  [&](const lox::instance_ptr &i) -> bool
+	  { return *i == *std::get<lox::instance_ptr>(rhs.value); },
+	});
 }
 
 bool lox::object::operator!=(const lox::object &rhs) const
@@ -101,5 +130,8 @@ std::u8string lox::object::to_string() const
 	  { return std::u8string(lox::as_u8string_view(std::to_string(number))); },
 	  [&](const bool &b) -> std::u8string { return b ? u8"true" : u8"false"; },
 	  [&](const callable_ref &c) -> std::u8string { return c->to_string(); },
+	  [&](const lox::klass_ptr &k) -> std::u8string { return k->to_string(); },
+	  [&](const lox::instance_ptr &i) -> std::u8string
+	  { return i->to_string(); },
 	});
 }

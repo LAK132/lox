@@ -18,9 +18,9 @@ const lox::object &lox::environment::emplace(const lox::token &k,
 	return emplace(k.lexeme, std::move(v));
 }
 
-const lox::object *lox::environment::find(const lox::token &k)
+const lox::object *lox::environment::find(std::u8string_view k)
 {
-	if (auto it = values.find(k.lexeme); it != values.end())
+	if (auto it = values.find(k); it != values.end())
 		return &it->second;
 	else if (enclosing)
 		return enclosing->find(k);
@@ -28,10 +28,21 @@ const lox::object *lox::environment::find(const lox::token &k)
 		return nullptr;
 }
 
-const lox::object *lox::environment::find(const lox::token &k, size_t distance)
+const lox::object *lox::environment::find(std::u8string_view k,
+                                          size_t distance)
 {
 	lox::environment *env = find_ancestor(this, distance);
 	return env ? env->find(k) : nullptr;
+}
+
+const lox::object *lox::environment::find(const lox::token &k)
+{
+	return find(k.lexeme);
+}
+
+const lox::object *lox::environment::find(const lox::token &k, size_t distance)
+{
+	return find(k.lexeme, distance);
 }
 
 const lox::object *lox::environment::replace(const lox::token &k,

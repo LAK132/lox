@@ -51,6 +51,13 @@ std::u8string lox::prefix_ast_printer_t::operator()(
 }
 
 std::u8string lox::prefix_ast_printer_t::operator()(
+  const lox::expr::get &expr) const
+{
+	return u8"(get " + expr.object->visit(*this) + u8" " +
+	       std::u8string(expr.name.lexeme) + u8")";
+}
+
+std::u8string lox::prefix_ast_printer_t::operator()(
   const lox::expr::grouping &expr) const
 {
 	return parenthesize(u8"group", {expr.expression.get()});
@@ -66,6 +73,20 @@ std::u8string lox::prefix_ast_printer_t::operator()(
   const lox::expr::logical &expr) const
 {
 	return parenthesize(expr.op.lexeme, {expr.left.get(), expr.right.get()});
+}
+
+std::u8string lox::prefix_ast_printer_t::operator()(
+  const lox::expr::set &expr) const
+{
+	return u8"(set " + expr.object->visit(*this) + u8" " +
+	       std::u8string(expr.name.lexeme) + u8" " + expr.value->visit(*this) +
+	       u8")";
+}
+
+std::u8string lox::prefix_ast_printer_t::operator()(
+  const lox::expr::this_keyword &expr) const
+{
+	return std::u8string(expr.keyword.lexeme);
 }
 
 std::u8string lox::prefix_ast_printer_t::operator()(
@@ -125,6 +146,13 @@ std::u8string lox::postfix_ast_printer_t::operator()(
 }
 
 std::u8string lox::postfix_ast_printer_t::operator()(
+  const lox::expr::get &expr) const
+{
+	return expr.object->visit(*this) + u8" " + std::u8string(expr.name.lexeme) +
+	       u8" get";
+}
+
+std::u8string lox::postfix_ast_printer_t::operator()(
   const lox::expr::grouping &expr) const
 {
 	return common(u8"group", {expr.expression.get()});
@@ -140,6 +168,19 @@ std::u8string lox::postfix_ast_printer_t::operator()(
   const lox::expr::logical &expr) const
 {
 	return common(expr.op.lexeme, {expr.left.get(), expr.right.get()});
+}
+
+std::u8string lox::postfix_ast_printer_t::operator()(
+  const lox::expr::set &expr) const
+{
+	return expr.object->visit(*this) + u8" " + std::u8string(expr.name.lexeme) +
+	       u8" " + expr.value->visit(*this) + u8" get";
+}
+
+std::u8string lox::postfix_ast_printer_t::operator()(
+  const lox::expr::this_keyword &expr) const
+{
+	return std::u8string(expr.keyword.lexeme);
 }
 
 std::u8string lox::postfix_ast_printer_t::operator()(

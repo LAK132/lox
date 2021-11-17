@@ -80,6 +80,8 @@ namespace lox
 
 		lox::stmt_ptr parse_var_declaration();
 
+		lox::stmt_ptr parse_class_declaration();
+
 		lox::stmt_ptr parse_declaration();
 
 		std::vector<lox::stmt_ptr> parse();

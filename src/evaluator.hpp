@@ -35,16 +35,24 @@ namespace lox
 		  std::span<const lox::stmt_ptr> statements,
 		  const lox::environment_ptr &env);
 
+		template<typename T>
+		std::optional<lox::object> find_variable(const lox::token &name,
+		                                         const T &expr);
+
 		std::optional<lox::object> operator()(const lox::expr::assign &expr);
 		std::optional<lox::object> operator()(const lox::expr::binary &expr);
 		std::optional<lox::object> operator()(const lox::expr::call &expr);
+		std::optional<lox::object> operator()(const lox::expr::get &expr);
 		std::optional<lox::object> operator()(const lox::expr::grouping &expr);
 		std::optional<lox::object> operator()(const lox::expr::literal &expr);
 		std::optional<lox::object> operator()(const lox::expr::logical &expr);
+		std::optional<lox::object> operator()(const lox::expr::set &expr);
+		std::optional<lox::object> operator()(const lox::expr::this_keyword &expr);
 		std::optional<lox::object> operator()(const lox::expr::unary &expr);
 		std::optional<lox::object> operator()(const lox::expr::variable &expr);
 
 		std::optional<std::u8string> operator()(const lox::stmt::block &stmt);
+		std::optional<std::u8string> operator()(const lox::stmt::klass &stmt);
 		std::optional<std::u8string> operator()(const lox::stmt::expr &stmt);
 		std::optional<std::u8string> operator()(const lox::stmt::branch &stmt);
 		std::optional<std::u8string> operator()(const lox::stmt::print &stmt);
@@ -54,6 +62,31 @@ namespace lox
 		  const lox::stmt::function_ptr &stmt);
 		std::optional<std::u8string> operator()(const lox::stmt::ret &stmt);
 	};
+}
+
+template<typename T>
+std::optional<lox::object> lox::evaluator::find_variable(
+  const lox::token &name, const T &expr)
+{
+	if (std::optional<size_t> maybe_distance = interpreter.find(expr);
+	    maybe_distance)
+	{
+		if (auto it = environment->find(name, *maybe_distance); it != nullptr)
+			return *it;
+		else
+			return error(name,
+			             u8"Undefined local variable '" +
+			               std::u8string(name.lexeme) + u8"'.");
+	}
+	else
+	{
+		if (auto it = interpreter.global_environment->find(name); it != nullptr)
+			return *it;
+		else
+			return error(name,
+			             u8"Undefined global variable '" +
+			               std::u8string(name.lexeme) + u8"'.");
+	}
 }
 
 #endif

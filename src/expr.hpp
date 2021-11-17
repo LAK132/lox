@@ -34,6 +34,12 @@ namespace lox
 			std::vector<expr_ptr> arguments;
 		};
 
+		struct get
+		{
+			expr_ptr object;
+			lox::token name;
+		};
+
 		struct grouping
 		{
 			expr_ptr expression;
@@ -51,6 +57,18 @@ namespace lox
 			expr_ptr right;
 		};
 
+		struct set
+		{
+			expr_ptr object;
+			lox::token name;
+			expr_ptr value;
+		};
+
+		struct this_keyword
+		{
+			lox::token keyword;
+		};
+
 		struct unary
 		{
 			lox::token op;
@@ -65,9 +83,12 @@ namespace lox
 		std::variant<assign,
 		             binary,
 		             call,
+		             get,
 		             grouping,
 		             literal,
 		             logical,
+		             set,
+		             this_keyword,
 		             unary,
 		             variable>
 		  value;
@@ -75,9 +96,12 @@ namespace lox
 		static expr_ptr make_assign(assign &&expr);
 		static expr_ptr make_binary(binary &&expr);
 		static expr_ptr make_call(call &&expr);
+		static expr_ptr make_get(get &&expr);
 		static expr_ptr make_grouping(grouping &&expr);
 		static expr_ptr make_literal(literal &&expr);
 		static expr_ptr make_logical(logical &&expr);
+		static expr_ptr make_set(set &&expr);
+		static expr_ptr make_this(this_keyword &&expr);
 		static expr_ptr make_unary(unary &&expr);
 		static expr_ptr make_variable(variable &&expr);
 

@@ -17,6 +17,14 @@ namespace lox
 	{
 		NONE,
 		FUNCTION,
+		INIT,
+		METHOD,
+	};
+
+	enum struct class_type
+	{
+		NONE,
+		CLASS,
 	};
 
 	struct resolver
@@ -24,9 +32,13 @@ namespace lox
 		lox::interpreter &interpreter;
 		std::vector<lox::string_map<char8_t, bool>> scopes;
 		lox::function_type current_function;
+		lox::class_type current_class;
 
 		inline resolver(lox::interpreter &i)
-		: interpreter(i), scopes(), current_function(function_type::NONE)
+		: interpreter(i),
+		  scopes(),
+		  current_function(function_type::NONE),
+		  current_class(lox::class_type::NONE)
 		{
 		}
 
@@ -47,13 +59,18 @@ namespace lox
 		std::optional<std::monostate> operator()(const lox::expr::assign &expr);
 		std::optional<std::monostate> operator()(const lox::expr::binary &expr);
 		std::optional<std::monostate> operator()(const lox::expr::call &expr);
+		std::optional<std::monostate> operator()(const lox::expr::get &expr);
 		std::optional<std::monostate> operator()(const lox::expr::grouping &expr);
 		std::optional<std::monostate> operator()(const lox::expr::literal &expr);
 		std::optional<std::monostate> operator()(const lox::expr::logical &expr);
+		std::optional<std::monostate> operator()(const lox::expr::set &expr);
+		std::optional<std::monostate> operator()(
+		  const lox::expr::this_keyword &expr);
 		std::optional<std::monostate> operator()(const lox::expr::unary &expr);
 		std::optional<std::monostate> operator()(const lox::expr::variable &expr);
 
 		std::optional<std::monostate> operator()(const lox::stmt::block &stmt);
+		std::optional<std::monostate> operator()(const lox::stmt::klass &stmt);
 		std::optional<std::monostate> operator()(const lox::stmt::expr &stmt);
 		std::optional<std::monostate> operator()(const lox::stmt::branch &stmt);
 		std::optional<std::monostate> operator()(const lox::stmt::print &stmt);

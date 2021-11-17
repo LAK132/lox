@@ -55,17 +55,24 @@ namespace lox
 		};
 		using function_ptr = std::shared_ptr<function>;
 
+		struct klass
+		{
+			lox::token name;
+			std::vector<lox::stmt::function_ptr> methods;
+		};
+
 		struct ret
 		{
 			lox::token keyword;
 			lox::expr_ptr value;
 		};
 
-		using value_type =
-		  std::variant<block, expr, branch, print, var, loop, function_ptr, ret>;
+		using value_type = std::
+		  variant<block, klass, expr, branch, print, var, loop, function_ptr, ret>;
 		value_type value;
 
 		static stmt_ptr make_block(block &&stmt);
+		static stmt_ptr make_klass(klass &&stmt);
 		static stmt_ptr make_expr(expr &&stmt);
 		static stmt_ptr make_branch(branch &&stmt);
 		static stmt_ptr make_print(print &&stmt);

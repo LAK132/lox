@@ -5,6 +5,11 @@ lox::stmt_ptr lox::stmt::make_block(block &&stmt)
 	return std::make_unique<lox::stmt>(lox::stmt{.value = std::move(stmt)});
 }
 
+lox::stmt_ptr lox::stmt::make_klass(klass &&stmt)
+{
+	return std::make_unique<lox::stmt>(lox::stmt{.value = std::move(stmt)});
+}
+
 lox::stmt_ptr lox::stmt::make_expr(expr &&stmt)
 {
 	return std::make_unique<lox::stmt>(lox::stmt{.value = std::move(stmt)});

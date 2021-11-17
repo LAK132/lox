@@ -1,6 +1,7 @@
 #include "evaluator.hpp"
 
 #include "callable.hpp"
+#include "klass.hpp"
 
 #include <iostream>
 
@@ -192,6 +193,28 @@ std::optional<lox::object> lox::evaluator::operator()(
 }
 
 std::optional<lox::object> lox::evaluator::operator()(
+  const lox::expr::get &expr)
+{
+	std::optional<lox::object> maybe_object = expr.object->visit(*this);
+	if (!maybe_object) return std::nullopt;
+
+	if (lox::instance *maybe_instance = maybe_object->get_instance();
+	    maybe_instance)
+	{
+		if (std::optional<lox::object> maybe_result =
+		      maybe_instance->find(expr.name);
+		    maybe_result)
+			return std::make_optional<lox::object>(*maybe_result);
+		else
+			return error(expr.name,
+			             u8"Undefined property '" + std::u8string(expr.name.lexeme) +
+			               u8"'.");
+	}
+	else
+		return error(expr.name, u8"Only instances have properties.");
+}
+
+std::optional<lox::object> lox::evaluator::operator()(
   const lox::expr::grouping &expr)
 {
 	return expr.expression->visit(*this);
@@ -223,6 +246,31 @@ std::optional<lox::object> lox::evaluator::operator()(
 }
 
 std::optional<lox::object> lox::evaluator::operator()(
+  const lox::expr::set &expr)
+{
+	std::optional<lox::object> maybe_object = expr.object->visit(*this);
+	if (!maybe_object) return std::nullopt;
+
+	lox::instance *maybe_instance = maybe_object->get_instance();
+	if (!maybe_instance)
+		return error(expr.name, u8"Only instances have fields.");
+
+	std::optional<lox::object> maybe_value = expr.value->visit(*this);
+	if (!maybe_value) return std::nullopt;
+
+	const lox::object &result =
+	  maybe_instance->emplace(expr.name, std::move(*maybe_value));
+
+	return std::make_optional<lox::object>(result);
+}
+
+std::optional<lox::object> lox::evaluator::operator()(
+  const lox::expr::this_keyword &expr)
+{
+	return find_variable(expr.keyword, expr);
+}
+
+std::optional<lox::object> lox::evaluator::operator()(
   const lox::expr::unary &expr)
 {
 	std::optional<lox::object> maybe_right = expr.right->visit(*this);
@@ -249,26 +297,7 @@ std::optional<lox::object> lox::evaluator::operator()(
 std::optional<lox::object> lox::evaluator::operator()(
   const lox::expr::variable &expr)
 {
-	if (std::optional<size_t> maybe_distance = interpreter.find(expr);
-	    maybe_distance)
-	{
-		if (auto it = environment->find(expr.name, *maybe_distance); it != nullptr)
-			return *it;
-		else
-			return error(expr.name,
-			             u8"Undefined local variable '" +
-			               std::u8string(expr.name.lexeme) + u8"'.");
-	}
-	else
-	{
-		if (auto it = interpreter.global_environment->find(expr.name);
-		    it != nullptr)
-			return *it;
-		else
-			return error(expr.name,
-			             u8"Undefined global variable '" +
-			               std::u8string(expr.name.lexeme) + u8"'.");
-	}
+	return find_variable(expr.name, expr);
 }
 
 std::optional<std::u8string> lox::evaluator::operator()(
@@ -276,6 +305,30 @@ std::optional<std::u8string> lox::evaluator::operator()(
 {
 	return execute_block(std::span(stmt.statements),
 	                     lox::environment::make(environment));
+}
+
+std::optional<std::u8string> lox::evaluator::operator()(
+  const lox::stmt::klass &stmt)
+{
+	environment->emplace(stmt.name, lox::object{});
+
+	lox::string_map<char8_t, lox::object> methods;
+	for (const lox::stmt::function_ptr &method : stmt.methods)
+	{
+		methods[std::u8string(method->name.lexeme)] = lox::object{
+		  std::make_shared<lox::callable>(lox::callable::make_interpreted({
+		    .func    = method,
+		    .closure = environment,
+		    .is_init = method->name.lexeme == u8"init",
+		  }))};
+	}
+
+	lox::klass_ptr klass =
+	  lox::klass::make(stmt.name.lexeme, std::move(methods));
+
+	environment->replace(stmt.name, lox::object{klass});
+
+	return std::make_optional<std::u8string>();
 }
 
 std::optional<std::u8string> lox::evaluator::operator()(
@@ -357,6 +410,7 @@ std::optional<std::u8string> lox::evaluator::operator()(
 	                       lox::callable::make_interpreted({
 	                         .func    = stmt,
 	                         .closure = environment,
+	                         .is_init = false,
 	                       }))});
 	return std::make_optional<std::u8string>();
 }

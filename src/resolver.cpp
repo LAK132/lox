@@ -99,6 +99,12 @@ std::optional<std::monostate> lox::resolver::operator()(
 }
 
 std::optional<std::monostate> lox::resolver::operator()(
+  const lox::expr::get &expr)
+{
+	return expr.object->visit(*this);
+}
+
+std::optional<std::monostate> lox::resolver::operator()(
   const lox::expr::grouping &expr)
 {
 	return expr.expression->visit(*this);
@@ -116,6 +122,27 @@ std::optional<std::monostate> lox::resolver::operator()(
 	if (!expr.left->visit(*this)) return std::nullopt;
 
 	if (!expr.right->visit(*this)) return std::nullopt;
+
+	return std::make_optional<std::monostate>();
+}
+
+std::optional<std::monostate> lox::resolver::operator()(
+  const lox::expr::set &expr)
+{
+	if (!expr.object->visit(*this)) return std::nullopt;
+
+	if (!expr.value->visit(*this)) return std::nullopt;
+
+	return std::make_optional<std::monostate>();
+}
+
+std::optional<std::monostate> lox::resolver::operator()(
+  const lox::expr::this_keyword &expr)
+{
+	if (current_class == lox::class_type::NONE)
+		return error(expr.keyword, u8"Casn't use 'this' outside of a class.");
+
+	resolve_local(expr, expr.keyword);
 
 	return std::make_optional<std::monostate>();
 }
@@ -148,6 +175,34 @@ std::optional<std::monostate> lox::resolver::operator()(
 	if (!resolve(stmt.statements)) return std::nullopt;
 
 	scopes.pop_back();
+
+	return std::make_optional<std::monostate>();
+}
+
+std::optional<std::monostate> lox::resolver::operator()(
+  const lox::stmt::klass &stmt)
+{
+	lox::class_type enclosing_class_type = current_class;
+	current_class                        = lox::class_type::CLASS;
+
+	if (!declare(stmt.name)) return std::nullopt;
+
+	define(stmt.name);
+
+	scopes.emplace_back();
+
+	scopes.back().insert_or_assign(u8"this", true);
+
+	for (const lox::stmt::function_ptr &method : stmt.methods)
+		if (!resolve_function(method,
+		                      method->name.lexeme == u8"init"
+		                        ? lox::function_type::INIT
+		                        : lox::function_type::METHOD))
+			return std::nullopt;
+
+	scopes.pop_back();
+
+	current_class = enclosing_class_type;
 
 	return std::make_optional<std::monostate>();
 }
@@ -216,7 +271,12 @@ std::optional<std::monostate> lox::resolver::operator()(
 		return error(stmt.keyword, u8"Can't return from top-level code.");
 
 	if (stmt.value)
+	{
+		if (current_function == lox::function_type::INIT)
+			return error(stmt.keyword,
+			             u8"Can't return a value from an initialiser.");
 		return stmt.value->visit(*this);
+	}
 	else
 		return std::make_optional<std::monostate>();
 }

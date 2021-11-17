@@ -21,6 +21,10 @@ namespace lox
 
 		const lox::object &emplace(const lox::token &k, lox::object v);
 
+		const lox::object *find(std::u8string_view k);
+
+		const lox::object *find(std::u8string_view k, size_t distance);
+
 		const lox::object *find(const lox::token &k);
 
 		const lox::object *find(const lox::token &k, size_t distance);

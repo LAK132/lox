@@ -1,5 +1,7 @@
 #include "parser.hpp"
 
+#include <assert.h>
+
 bool lox::parser::empty() const
 {
 	return peek().type == lox::token_type::EOF_TOK;
@@ -84,6 +86,8 @@ lox::expr_ptr lox::parser::parse_primary()
 	if (match({NUMBER, STRING}))
 		return lox::expr::make_literal({.value = last().literal});
 
+	if (match({THIS})) return lox::expr::make_this({.keyword = last()});
+
 	if (match({IDENTIFIER})) return lox::expr::make_variable({.name = last()});
 
 	if (match({LEFT_PAREN}))
@@ -134,10 +138,24 @@ lox::expr_ptr lox::parser::parse_call()
 
 	for (;;)
 	{
-		if (!match({lox::token_type::LEFT_PAREN})) break;
-
-		expr = finish_call(std::move(expr));
-		if (!expr) return lox::expr_ptr{};
+		if (match({lox::token_type::LEFT_PAREN}))
+		{
+			expr = finish_call(std::move(expr));
+			if (!expr) return lox::expr_ptr{};
+		}
+		else if (match({lox::token_type::DOT}))
+		{
+			const lox::token *name = consume(lox::token_type::IDENTIFIER,
+			                                 u8"Expected property name after '.'.");
+			if (!name) return lox::expr_ptr{};
+			expr = lox::expr::make_get({
+			  .object = std::move(expr),
+			  .name   = *name,
+			});
+			if (!expr) return lox::expr_ptr{};
+		}
+		else
+			break;
 	}
 
 	return expr;
@@ -307,6 +325,15 @@ lox::expr_ptr lox::parser::parse_assignment()
 			return lox::expr::make_assign({
 			  .name  = std::get<lox::expr::variable>(expr->value).name,
 			  .value = std::move(value),
+			});
+		}
+		else if (std::holds_alternative<lox::expr::get>(expr->value))
+		{
+			lox::expr::get &get = std::get<lox::expr::get>(expr->value);
+			return lox::expr::make_set({
+			  .object = std::move(get.object),
+			  .name   = std::move(get.name),
+			  .value  = std::move(value),
 			});
 		}
 
@@ -584,11 +611,43 @@ lox::stmt_ptr lox::parser::parse_var_declaration()
 	return lox::stmt::make_var({.name = *name, .init = std::move(init)});
 }
 
+lox::stmt_ptr lox::parser::parse_class_declaration()
+{
+	const lox::token *name =
+	  consume(lox::token_type::IDENTIFIER, u8"Expected class name.");
+	if (!name) return lox::stmt_ptr{};
+
+	if (!consume(lox::token_type::LEFT_BRACE,
+	             u8"Expected '{' before class body."))
+		return lox::stmt_ptr{};
+
+	std::vector<lox::stmt::function_ptr> methods;
+	while (!check(lox::token_type::RIGHT_BRACE) && !empty())
+		if (lox::stmt_ptr method = parse_function(u8"method"); method)
+		{
+			assert(std::holds_alternative<lox::stmt::function_ptr>(method->value));
+			methods.emplace_back(std::get<lox::stmt::function_ptr>(method->value));
+		}
+		else
+			return lox::stmt_ptr{};
+
+	if (!consume(lox::token_type::RIGHT_BRACE,
+	             u8"Expected '}' after class body."))
+		return lox::stmt_ptr{};
+
+	return lox::stmt::make_klass({
+	  .name    = *name,
+	  .methods = std::move(methods),
+	});
+}
+
 lox::stmt_ptr lox::parser::parse_declaration()
 {
 	auto result = [&]()
 	{
-		if (match({lox::token_type::FUN}))
+		if (match({lox::token_type::CLASS}))
+			return parse_class_declaration();
+		else if (match({lox::token_type::FUN}))
 			return parse_function(u8"function");
 		else if (match({lox::token_type::VAR}))
 			return parse_var_declaration();

@@ -74,3 +74,57 @@ var a = "global";
   var a = "block";
   showA(); // should print "global"
 }
+
+class DevonshireCream {
+  serveOn() {
+    return "Scones";
+  }
+}
+
+print DevonshireCream; // "DevonshireCream".
+
+class Bagel {}
+var bagel = Bagel();
+print bagel; // "Bagel instance".
+
+class Bacon {
+  eat() {
+    print "Crunch crunch crunch!";
+  }
+}
+
+Bacon().eat(); // "Crunch crunch crunch!".
+
+class Cake {
+  taste() {
+    var adjective = "delicious";
+    print "The " + this.flavor + " cake is " + adjective + "!";
+  }
+}
+
+var cake = Cake();
+cake.flavor = "German chocolate";
+cake.taste(); // Prints "The German chocolate cake is delicious!".
+
+class Foo {
+  init(asdf) {
+    print asdf;
+    print this;
+  }
+}
+
+var foo = Foo("hello");
+print foo.init("wah");
+
+class Circle {
+  init(radius) {
+    this.radius = radius;
+  }
+
+  area() {
+    return 3.141592653 * this.radius * this.radius;
+  }
+}
+
+var circle = Circle(4);
+print circle.area(); // roughly "50.2655".

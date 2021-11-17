@@ -15,6 +15,8 @@
 
 namespace lox
 {
+	struct klass;
+
 	struct callable
 	{
 		struct native
@@ -28,12 +30,19 @@ namespace lox
 		{
 			lox::stmt::function_ptr func;
 			lox::environment_ptr closure;
+			bool is_init;
 		};
 
-		std::variant<native, interpreted> value;
+		struct constructor
+		{
+			std::shared_ptr<lox::klass> klass;
+		};
+
+		std::variant<native, interpreted, constructor> value;
 
 		static callable make_native(native &&c);
 		static callable make_interpreted(interpreted &&c);
+		static callable make_constructor(constructor &&c);
 
 		size_t arity() const;
 
