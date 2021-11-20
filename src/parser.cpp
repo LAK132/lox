@@ -86,6 +86,22 @@ lox::expr_ptr lox::parser::parse_primary()
 	if (match({NUMBER, STRING}))
 		return lox::expr::make_literal({.value = last().literal});
 
+	if (match({SUPER}))
+	{
+		lox::token keyword = last();
+
+		if (!consume(DOT, u8"Expected '.' after 'super'.")) return lox::expr_ptr{};
+
+		const lox::token *method =
+		  consume(IDENTIFIER, u8"Expected superclass method name.");
+		if (!method) return lox::expr_ptr{};
+
+		return lox::expr::make_super({
+		  .keyword = std::move(keyword),
+		  .method  = *method,
+		});
+	}
+
 	if (match({THIS})) return lox::expr::make_this({.keyword = last()});
 
 	if (match({IDENTIFIER})) return lox::expr::make_variable({.name = last()});
@@ -617,6 +633,16 @@ lox::stmt_ptr lox::parser::parse_class_declaration()
 	  consume(lox::token_type::IDENTIFIER, u8"Expected class name.");
 	if (!name) return lox::stmt_ptr{};
 
+	lox::expr_ptr superclass;
+	if (match({lox::token_type::LESS}))
+	{
+		if (!consume(lox::token_type::IDENTIFIER, u8"Expected superclass name."))
+			return lox::stmt_ptr{};
+		superclass = lox::expr::make_variable({
+		  .name = last(),
+		});
+	}
+
 	if (!consume(lox::token_type::LEFT_BRACE,
 	             u8"Expected '{' before class body."))
 		return lox::stmt_ptr{};
@@ -636,8 +662,9 @@ lox::stmt_ptr lox::parser::parse_class_declaration()
 		return lox::stmt_ptr{};
 
 	return lox::stmt::make_klass({
-	  .name    = *name,
-	  .methods = std::move(methods),
+	  .name       = *name,
+	  .superclass = std::move(superclass),
+	  .methods    = std::move(methods),
 	});
 }
 

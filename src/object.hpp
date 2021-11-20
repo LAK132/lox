@@ -54,10 +54,11 @@ namespace lox
 
 		const lox::callable *get_callable() const;
 
-		const lox::klass *get_klass() const;
+		// may be empty
+		std::shared_ptr<lox::klass> get_klass() const;
 
-		lox::instance *get_instance();
-		const lox::instance *get_instance() const;
+		// may be empty
+		std::shared_ptr<lox::instance> get_instance() const;
 
 		bool operator==(const lox::object &rhs) const;
 

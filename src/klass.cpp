@@ -1,10 +1,12 @@
 #include "klass.hpp"
 
 lox::klass_ptr lox::klass::make(std::u8string_view name,
+                                std::shared_ptr<const lox::klass> superclass,
                                 lox::string_map<char8_t, lox::object> methods)
 {
 	lox::klass_ptr result = std::make_shared<lox::klass>(lox::klass{});
 	result->name          = name;
+	result->superclass    = superclass;
 	result->methods       = std::move(methods);
 	result->constructor   = lox::callable::make_constructor({.klass = result});
 	return result;
@@ -18,6 +20,8 @@ std::shared_ptr<lox::callable> lox::klass::find_method(
 	    std::holds_alternative<std::shared_ptr<lox::callable>>(
 	      method->second.value))
 		return std::get<std::shared_ptr<lox::callable>>(method->second.value);
+	else if (superclass)
+		return superclass->find_method(method_name);
 	else
 		return {};
 }
@@ -58,6 +62,8 @@ std::shared_ptr<lox::callable> lox::klass::find_bound_method(
 		else
 			return callable;
 	}
+	else if (superclass)
+		return superclass->find_bound_method(method_name, instance);
 	else
 		return {};
 }

@@ -84,6 +84,12 @@ std::u8string lox::prefix_ast_printer_t::operator()(
 }
 
 std::u8string lox::prefix_ast_printer_t::operator()(
+  const lox::expr::super_keyword &expr) const
+{
+	return std::u8string(expr.keyword.lexeme);
+}
+
+std::u8string lox::prefix_ast_printer_t::operator()(
   const lox::expr::this_keyword &expr) const
 {
 	return std::u8string(expr.keyword.lexeme);
@@ -175,6 +181,12 @@ std::u8string lox::postfix_ast_printer_t::operator()(
 {
 	return expr.object->visit(*this) + u8" " + std::u8string(expr.name.lexeme) +
 	       u8" " + expr.value->visit(*this) + u8" get";
+}
+
+std::u8string lox::postfix_ast_printer_t::operator()(
+  const lox::expr::super_keyword &expr) const
+{
+	return std::u8string(expr.keyword.lexeme);
 }
 
 std::u8string lox::postfix_ast_printer_t::operator()(

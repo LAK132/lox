@@ -58,6 +58,7 @@ namespace lox
 		struct klass
 		{
 			lox::token name;
+			lox::expr_ptr superclass;
 			std::vector<lox::stmt::function_ptr> methods;
 		};
 

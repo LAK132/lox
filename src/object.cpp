@@ -71,25 +71,18 @@ const lox::callable *lox::object::get_callable() const
 	              : nullptr);
 }
 
-const lox::klass *lox::object::get_klass() const
+lox::klass_ptr lox::object::get_klass() const
 {
 	return std::holds_alternative<lox::klass_ptr>(value)
-	         ? std::get<lox::klass_ptr>(value).get()
-	         : nullptr;
+	         ? std::get<lox::klass_ptr>(value)
+	         : lox::klass_ptr();
 }
 
-lox::instance *lox::object::get_instance()
+lox::instance_ptr lox::object::get_instance() const
 {
 	return std::holds_alternative<lox::instance_ptr>(value)
-	         ? std::get<lox::instance_ptr>(value).get()
-	         : nullptr;
-}
-
-const lox::instance *lox::object::get_instance() const
-{
-	return std::holds_alternative<lox::instance_ptr>(value)
-	         ? std::get<lox::instance_ptr>(value).get()
-	         : nullptr;
+	         ? std::get<lox::instance_ptr>(value)
+	         : lox::instance_ptr();
 }
 
 bool lox::object::operator==(const lox::object &rhs) const

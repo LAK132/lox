@@ -47,6 +47,8 @@ namespace lox
 		std::optional<lox::object> operator()(const lox::expr::literal &expr);
 		std::optional<lox::object> operator()(const lox::expr::logical &expr);
 		std::optional<lox::object> operator()(const lox::expr::set &expr);
+		std::optional<lox::object> operator()(
+		  const lox::expr::super_keyword &expr);
 		std::optional<lox::object> operator()(const lox::expr::this_keyword &expr);
 		std::optional<lox::object> operator()(const lox::expr::unary &expr);
 		std::optional<lox::object> operator()(const lox::expr::variable &expr);

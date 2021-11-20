@@ -82,6 +82,12 @@ void lox::interpreter::resolve(const lox::expr::assign &expr, size_t distance)
 	local_assigns[&expr] = distance;
 }
 
+void lox::interpreter::resolve(const lox::expr::super_keyword &expr,
+                               size_t distance)
+{
+	local_super[&expr] = distance;
+}
+
 void lox::interpreter::resolve(const lox::expr::this_keyword &expr,
                                size_t distance)
 {
@@ -101,6 +107,16 @@ std::optional<size_t> lox::interpreter::find(const lox::expr::assign &expr)
 {
 	auto distance = local_assigns.find(&expr);
 	if (distance != local_assigns.end())
+		return std::make_optional<size_t>(distance->second);
+	else
+		return std::nullopt;
+}
+
+std::optional<size_t> lox::interpreter::find(
+  const lox::expr::super_keyword &expr)
+{
+	auto distance = local_super.find(&expr);
+	if (distance != local_super.end())
 		return std::make_optional<size_t>(distance->second);
 	else
 		return std::nullopt;

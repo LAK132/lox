@@ -3,9 +3,10 @@
 #include <assert.h>
 
 std::nullopt_t lox::resolver::error(const lox::token &token,
-                                    std::u8string_view message)
+                                    std::u8string_view message,
+                                    const std::source_location srcloc)
 {
-	interpreter.error(token, message);
+	interpreter.error(token, message, srcloc);
 	return std::nullopt;
 }
 
@@ -137,10 +138,25 @@ std::optional<std::monostate> lox::resolver::operator()(
 }
 
 std::optional<std::monostate> lox::resolver::operator()(
+  const lox::expr::super_keyword &expr)
+{
+	if (current_class == lox::class_type::NONE)
+		return error(expr.keyword, u8"Can't use 'super' outside of a class.");
+
+	if (current_class != lox::class_type::SUBCLASS)
+		return error(expr.keyword,
+		             u8"Can't use 'super' in a class with no superclass.");
+
+	resolve_local(expr, expr.keyword);
+
+	return std::make_optional<std::monostate>();
+}
+
+std::optional<std::monostate> lox::resolver::operator()(
   const lox::expr::this_keyword &expr)
 {
 	if (current_class == lox::class_type::NONE)
-		return error(expr.keyword, u8"Casn't use 'this' outside of a class.");
+		return error(expr.keyword, u8"Can't use 'this' outside of a class.");
 
 	resolve_local(expr, expr.keyword);
 
@@ -189,6 +205,23 @@ std::optional<std::monostate> lox::resolver::operator()(
 
 	define(stmt.name);
 
+	if (stmt.superclass)
+	{
+		const lox::expr::variable &superclass =
+		  std::get<lox::expr::variable>(stmt.superclass->value);
+
+		if (stmt.name.lexeme == superclass.name.lexeme)
+			return error(superclass.name, u8"A class can't inherit from itself.");
+
+		current_class = lox::class_type::SUBCLASS;
+
+		if (!(*this)(superclass)) return std::nullopt;
+
+		scopes.emplace_back();
+
+		scopes.back().insert_or_assign(u8"super", true);
+	}
+
 	scopes.emplace_back();
 
 	scopes.back().insert_or_assign(u8"this", true);
@@ -201,6 +234,8 @@ std::optional<std::monostate> lox::resolver::operator()(
 			return std::nullopt;
 
 	scopes.pop_back();
+
+	if (stmt.superclass) scopes.pop_back();
 
 	current_class = enclosing_class_type;
 

@@ -2,6 +2,7 @@
 #define LOX_KLASS_HPP
 
 #include "callable.hpp"
+#include "expr.hpp"
 #include "object.hpp"
 #include "string_map.hpp"
 #include "token.hpp"
@@ -25,12 +26,16 @@ namespace lox
 
 		std::u8string name;
 
+		std::shared_ptr<const lox::klass> superclass;
+
 		lox::string_map<char8_t, lox::object> methods;
 
 		lox::callable constructor;
 
 		static std::shared_ptr<lox::klass> make(
-		  std::u8string_view name, lox::string_map<char8_t, lox::object> methods);
+		  std::u8string_view name,
+		  std::shared_ptr<const lox::klass> superclass,
+		  lox::string_map<char8_t, lox::object> methods);
 
 		std::shared_ptr<lox::callable> find_method(
 		  std::u8string_view method_name) const;
@@ -47,7 +52,8 @@ namespace lox
 		std::u8string to_string() const;
 	};
 
-	using klass_ptr = std::shared_ptr<lox::klass>;
+	using klass_ptr       = std::shared_ptr<lox::klass>;
+	using const_klass_ptr = std::shared_ptr<const lox::klass>;
 
 	struct instance : public std::enable_shared_from_this<instance>
 	{

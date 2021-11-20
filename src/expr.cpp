@@ -40,6 +40,11 @@ lox::expr::expr_ptr lox::expr::make_set(set &&expr)
 	return std::make_unique<lox::expr>(lox::expr{.value = std::move(expr)});
 }
 
+lox::expr::expr_ptr lox::expr::make_super(super_keyword &&expr)
+{
+	return std::make_unique<lox::expr>(lox::expr{.value = std::move(expr)});
+}
+
 lox::expr::expr_ptr lox::expr::make_this(this_keyword &&expr)
 {
 	return std::make_unique<lox::expr>(lox::expr{.value = std::move(expr)});

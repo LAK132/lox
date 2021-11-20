@@ -25,6 +25,7 @@ namespace lox
 	{
 		NONE,
 		CLASS,
+		SUBCLASS,
 	};
 
 	struct resolver
@@ -42,7 +43,10 @@ namespace lox
 		{
 		}
 
-		std::nullopt_t error(const lox::token &token, std::u8string_view message);
+		std::nullopt_t error(
+		  const lox::token &token,
+		  std::u8string_view message,
+		  const std::source_location srcloc = std::source_location::current());
 
 		std::optional<std::monostate> resolve(
 		  std::span<const lox::stmt_ptr> statements);
@@ -64,6 +68,8 @@ namespace lox
 		std::optional<std::monostate> operator()(const lox::expr::literal &expr);
 		std::optional<std::monostate> operator()(const lox::expr::logical &expr);
 		std::optional<std::monostate> operator()(const lox::expr::set &expr);
+		std::optional<std::monostate> operator()(
+		  const lox::expr::super_keyword &expr);
 		std::optional<std::monostate> operator()(
 		  const lox::expr::this_keyword &expr);
 		std::optional<std::monostate> operator()(const lox::expr::unary &expr);

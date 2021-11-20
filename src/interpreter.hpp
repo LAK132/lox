@@ -21,6 +21,7 @@ namespace lox
 		lox::environment_ptr global_environment;
 		std::unordered_map<const lox::expr::variable *, size_t> local_declares;
 		std::unordered_map<const lox::expr::assign *, size_t> local_assigns;
+		std::unordered_map<const lox::expr::super_keyword *, size_t> local_super;
 		std::unordered_map<const lox::expr::this_keyword *, size_t> local_this;
 
 		void report(
@@ -48,10 +49,12 @@ namespace lox
 
 		void resolve(const lox::expr::variable &expr, size_t distance);
 		void resolve(const lox::expr::assign &expr, size_t distance);
+		void resolve(const lox::expr::super_keyword &expr, size_t distance);
 		void resolve(const lox::expr::this_keyword &expr, size_t distance);
 
 		std::optional<size_t> find(const lox::expr::variable &expr);
 		std::optional<size_t> find(const lox::expr::assign &expr);
+		std::optional<size_t> find(const lox::expr::super_keyword &expr);
 		std::optional<size_t> find(const lox::expr::this_keyword &expr);
 
 		std::u8string interpret(const lox::expr &expr);

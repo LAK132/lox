@@ -64,6 +64,12 @@ namespace lox
 			expr_ptr value;
 		};
 
+		struct super_keyword
+		{
+			lox::token keyword;
+			lox::token method;
+		};
+
 		struct this_keyword
 		{
 			lox::token keyword;
@@ -88,6 +94,7 @@ namespace lox
 		             literal,
 		             logical,
 		             set,
+		             super_keyword,
 		             this_keyword,
 		             unary,
 		             variable>
@@ -101,6 +108,7 @@ namespace lox
 		static expr_ptr make_literal(literal &&expr);
 		static expr_ptr make_logical(logical &&expr);
 		static expr_ptr make_set(set &&expr);
+		static expr_ptr make_super(super_keyword &&expr);
 		static expr_ptr make_this(this_keyword &&expr);
 		static expr_ptr make_unary(unary &&expr);
 		static expr_ptr make_variable(variable &&expr);
