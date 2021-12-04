@@ -1,7 +1,7 @@
 #include "evaluator.hpp"
 
 #include "callable.hpp"
-#include "klass.hpp"
+#include "type.hpp"
 
 #include <iostream>
 
@@ -198,7 +198,7 @@ std::optional<lox::object> lox::evaluator::operator()(
 	std::optional<lox::object> maybe_object = expr.object->visit(*this);
 	if (!maybe_object) return std::nullopt;
 
-	if (lox::instance_ptr maybe_instance = maybe_object->get_instance();
+	if (const lox::instance *maybe_instance = maybe_object->get_instance();
 	    maybe_instance)
 	{
 		if (std::optional<lox::object> maybe_result =
@@ -251,7 +251,7 @@ std::optional<lox::object> lox::evaluator::operator()(
 	std::optional<lox::object> maybe_object = expr.object->visit(*this);
 	if (!maybe_object) return std::nullopt;
 
-	lox::instance_ptr maybe_instance = maybe_object->get_instance();
+	lox::instance *maybe_instance = maybe_object->get_instance();
 	if (!maybe_instance)
 		return error(expr.name, u8"Only instances have fields.");
 
@@ -274,25 +274,25 @@ std::optional<lox::object> lox::evaluator::operator()(
 	  environment->find(u8"super", *maybe_distance);
 	if (!maybe_super_object) return error(expr.keyword, u8"Invalid 'super'.");
 
-	lox::klass_ptr maybe_super = maybe_super_object->get_klass();
+	const lox::type *maybe_super = maybe_super_object->get_type();
 	if (!maybe_super) return error(expr.keyword, u8"Invalid 'super'.");
 
 	const lox::object *maybe_this =
 	  environment->find(u8"this", (*maybe_distance) - 1U);
 	if (!maybe_this) return error(expr.keyword, u8"Invalid 'this'.");
 
-	lox::instance_ptr maybe_instance = maybe_this->get_instance();
+	const lox::instance *maybe_instance = maybe_this->get_instance();
 	if (!maybe_instance)
 		return error(expr.keyword, u8"Invalid 'this', expected an instance.");
 
-	std::shared_ptr<lox::callable> maybe_method = maybe_super->find_bound_method(
-	  expr.method.lexeme, maybe_instance->shared_from_this());
+	std::optional<lox::callable> maybe_method =
+	  maybe_super->find_bound_method(expr.method.lexeme, *maybe_instance);
 	if (!maybe_method)
 		return error(expr.method,
 		             u8"Undefined property '" + std::u8string(expr.method.lexeme) +
 		               u8"'.");
 
-	return std::make_optional<lox::object>(lox::object{maybe_method});
+	return std::make_optional<lox::object>(lox::object{*maybe_method});
 }
 
 std::optional<lox::object> lox::evaluator::operator()(
@@ -339,9 +339,9 @@ std::optional<std::u8string> lox::evaluator::operator()(
 }
 
 std::optional<std::u8string> lox::evaluator::operator()(
-  const lox::stmt::klass &stmt)
+  const lox::stmt::type &stmt)
 {
-	lox::klass_ptr superclass;
+	const lox::type *superclass = nullptr;
 	if (stmt.superclass)
 	{
 		const lox::expr::variable &supervar =
@@ -350,11 +350,11 @@ std::optional<std::u8string> lox::evaluator::operator()(
 		std::optional<lox::object> maybe_super = (*this)(supervar);
 		if (!maybe_super) return std::nullopt;
 
-		lox::klass_ptr maybe_klass = maybe_super->get_klass();
-		if (!maybe_klass)
+		const lox::type *maybe_type = maybe_super->get_type();
+		if (!maybe_type)
 			return error(supervar.name, u8"Superclass must be a class.");
 
-		superclass = maybe_klass->shared_from_this();
+		superclass = maybe_type;
 	}
 
 	environment->emplace(stmt.name, lox::object{});
@@ -362,26 +362,23 @@ std::optional<std::u8string> lox::evaluator::operator()(
 	if (superclass)
 	{
 		environment = lox::environment::make(environment);
-		environment->emplace(u8"super", lox::object{superclass});
+		environment->emplace(u8"super", lox::object{*superclass});
 	}
 
 	lox::string_map<char8_t, lox::object> methods;
 	for (const lox::stmt::function_ptr &method : stmt.methods)
 	{
 		methods[std::u8string(method->name.lexeme)] = lox::object{
-		  std::make_shared<lox::callable>(lox::callable::make_interpreted({
-		    .func    = method,
-		    .closure = environment,
-		    .is_init = method->name.lexeme == u8"init",
-		  }))};
+		  lox::callable(method, environment, method->name.lexeme == u8"init")};
 	}
 
-	lox::klass_ptr klass =
-	  lox::klass::make(stmt.name.lexeme, superclass, std::move(methods));
+	lox::type type =
+	  superclass ? lox::type(stmt.name.lexeme, std::move(methods), *superclass)
+	             : lox::type(stmt.name.lexeme, std::move(methods));
 
 	if (superclass) environment = environment->enclosing;
 
-	environment->replace(stmt.name, lox::object{klass});
+	environment->replace(stmt.name, lox::object{type});
 
 	return std::make_optional<std::u8string>();
 }
@@ -461,12 +458,7 @@ std::optional<std::u8string> lox::evaluator::operator()(
   const lox::stmt::function_ptr &stmt)
 {
 	environment->emplace(stmt->name.lexeme,
-	                     lox::object{std::make_shared<lox::callable>(
-	                       lox::callable::make_interpreted({
-	                         .func    = stmt,
-	                         .closure = environment,
-	                         .is_init = false,
-	                       }))});
+	                     lox::object{lox::callable(stmt, environment, false)});
 	return std::make_optional<std::u8string>();
 }
 

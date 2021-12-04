@@ -55,7 +55,7 @@ namespace lox
 		};
 		using function_ptr = std::shared_ptr<function>;
 
-		struct klass
+		struct type
 		{
 			lox::token name;
 			lox::expr_ptr superclass;
@@ -69,11 +69,11 @@ namespace lox
 		};
 
 		using value_type = std::
-		  variant<block, klass, expr, branch, print, var, loop, function_ptr, ret>;
+		  variant<block, type, expr, branch, print, var, loop, function_ptr, ret>;
 		value_type value;
 
 		static stmt_ptr make_block(block &&stmt);
-		static stmt_ptr make_klass(klass &&stmt);
+		static stmt_ptr make_type(type &&stmt);
 		static stmt_ptr make_expr(expr &&stmt);
 		static stmt_ptr make_branch(branch &&stmt);
 		static stmt_ptr make_print(print &&stmt);

@@ -4,7 +4,7 @@ lox = files([
   'evaluator.cpp',
   'expr.cpp',
   'interpreter.cpp',
-  'klass.cpp',
+  'type.cpp',
   'lox.cpp',
   'main.cpp',
   'object.cpp',

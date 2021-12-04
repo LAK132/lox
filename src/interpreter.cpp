@@ -181,13 +181,13 @@ void lox::interpreter::init_globals()
 	global_environment->emplace(
 	  u8"clock",
 	  lox::object{
-	    std::make_shared<lox::callable>(LOX_CALLABLE_MAKE_NATIVE(lox_clock)),
+	    lox::callable(LOX_CALLABLE_MAKE_NATIVE(lox_clock)),
 	  });
 
 	global_environment->emplace(
 	  u8"to_string",
 	  lox::object{
-	    std::make_shared<lox::callable>(LOX_CALLABLE_MAKE_NATIVE(lox_to_string)),
+	    lox::callable(LOX_CALLABLE_MAKE_NATIVE(lox_to_string)),
 	  });
 }
 

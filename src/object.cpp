@@ -1,37 +1,68 @@
 #include "object.hpp"
 
 #include "callable.hpp"
-#include "klass.hpp"
 #include "string_hacks.hpp"
+#include "type.hpp"
 
 #include <string>
 
-lox::object::object() = default;
-
-lox::object::object(const object &) = default;
-
-lox::object::object(object &&) = default;
-
-lox::object::~object() = default;
-
-lox::object &lox::object::operator=(const object &) = default;
-
-lox::object &lox::object::operator=(object &&) = default;
-
-lox::object::object(const value_type &v) : value(v) {}
-
-lox::object::object(value_type &&v) : value(std::move(v)) {}
-
-lox::object &lox::object::operator=(const value_type &v)
+struct lox::object::impl
 {
-	value = v;
-	return *this;
+	lox::object::value_type value;
+};
+
+lox::object::object()
+{
+	_impl = std::make_shared<lox::object::impl>();
 }
 
-lox::object &lox::object::operator=(value_type &&v)
+lox::object::object(std::monostate value)
 {
-	std::swap(v, value);
-	return *this;
+	_impl = std::make_shared<lox::object::impl>(lox::object::impl{
+	  .value = value,
+	});
+}
+
+lox::object::object(std::u8string value)
+{
+	_impl = std::make_shared<lox::object::impl>(lox::object::impl{
+	  .value = value,
+	});
+}
+
+lox::object::object(double value)
+{
+	_impl = std::make_shared<lox::object::impl>(lox::object::impl{
+	  .value = value,
+	});
+}
+
+lox::object::object(bool value)
+{
+	_impl = std::make_shared<lox::object::impl>(lox::object::impl{
+	  .value = value,
+	});
+}
+
+lox::object::object(const lox::callable &value)
+{
+	_impl = std::make_shared<lox::object::impl>(lox::object::impl{
+	  .value = value,
+	});
+}
+
+lox::object::object(const lox::type &value)
+{
+	_impl = std::make_shared<lox::object::impl>(lox::object::impl{
+	  .value = value,
+	});
+}
+
+lox::object::object(const lox::instance &value)
+{
+	_impl = std::make_shared<lox::object::impl>(lox::object::impl{
+	  .value = value,
+	});
 }
 
 bool lox::object::is_truthy() const
@@ -43,68 +74,85 @@ bool lox::object::is_truthy() const
 	});
 }
 
+lox::object::value_type &lox::object::value()
+{
+	return _impl->value;
+}
+
+const lox::object::value_type &lox::object::value() const
+{
+	return _impl->value;
+}
+
 const std::u8string *lox::object::get_string() const
 {
-	return std::holds_alternative<std::u8string>(value)
-	         ? &std::get<std::u8string>(value)
+	return std::holds_alternative<std::u8string>(_impl->value)
+	         ? &std::get<std::u8string>(_impl->value)
 	         : nullptr;
 }
 
 const double *lox::object::get_number() const
 {
-	return std::holds_alternative<double>(value) ? &std::get<double>(value)
-	                                             : nullptr;
+	return std::holds_alternative<double>(_impl->value)
+	         ? &std::get<double>(_impl->value)
+	         : nullptr;
 }
 
 const bool *lox::object::get_bool() const
 {
-	return std::holds_alternative<bool>(value) ? &std::get<bool>(value)
-	                                           : nullptr;
+	return std::holds_alternative<bool>(_impl->value)
+	         ? &std::get<bool>(_impl->value)
+	         : nullptr;
 }
 
 const lox::callable *lox::object::get_callable() const
 {
-	return std::holds_alternative<callable_ref>(value)
-	         ? std::get<callable_ref>(value).get()
-	         : (std::holds_alternative<lox::klass_ptr>(value)
-	              ? &std::get<lox::klass_ptr>(value)->constructor
+	return std::holds_alternative<lox::callable>(_impl->value)
+	         ? &std::get<lox::callable>(_impl->value)
+	         : (std::holds_alternative<lox::type>(_impl->value)
+	              ? &std::get<lox::type>(_impl->value).constructor()
 	              : nullptr);
 }
 
-lox::klass_ptr lox::object::get_klass() const
+const lox::type *lox::object::get_type() const
 {
-	return std::holds_alternative<lox::klass_ptr>(value)
-	         ? std::get<lox::klass_ptr>(value)
-	         : lox::klass_ptr();
+	return std::holds_alternative<lox::type>(_impl->value)
+	         ? &std::get<lox::type>(_impl->value)
+	         : nullptr;
 }
 
-lox::instance_ptr lox::object::get_instance() const
+lox::instance *lox::object::get_instance()
 {
-	return std::holds_alternative<lox::instance_ptr>(value)
-	         ? std::get<lox::instance_ptr>(value)
-	         : lox::instance_ptr();
+	return std::holds_alternative<lox::instance>(_impl->value)
+	         ? &std::get<lox::instance>(_impl->value)
+	         : nullptr;
+}
+
+const lox::instance *lox::object::get_instance() const
+{
+	return std::holds_alternative<lox::instance>(_impl->value)
+	         ? &std::get<lox::instance>(_impl->value)
+	         : nullptr;
 }
 
 bool lox::object::operator==(const lox::object &rhs) const
 {
-	if (value.index() != rhs.value.index()) return false;
+	if (_impl->value.index() != rhs._impl->value.index()) return false;
 
 	return visit(lox::overloaded{
 	  [&](std::monostate) -> bool { return true; },
 	  [&](const std::u8string &str) -> bool
-	  { return str == std::get<std::u8string>(rhs.value); },
+	  { return str == std::get<std::u8string>(rhs._impl->value); },
 	  [&](const double &number) -> bool
-	  { return number == std::get<double>(rhs.value); },
-	  [&](const bool &b) -> bool { return b == std::get<bool>(rhs.value); },
-	  [&](const callable_ref &c) -> bool
-	  {
-		  const auto &rc = std::get<callable_ref>(rhs.value);
-		  return *c == *rc;
-	  },
-	  [&](const lox::klass_ptr &k) -> bool
-	  { return k == std::get<lox::klass_ptr>(rhs.value); },
-	  [&](const lox::instance_ptr &i) -> bool
-	  { return *i == *std::get<lox::instance_ptr>(rhs.value); },
+	  { return number == std::get<double>(rhs._impl->value); },
+	  [&](const bool &b) -> bool
+	  { return b == std::get<bool>(rhs._impl->value); },
+	  [&](const lox::callable &c) -> bool
+	  { return c == std::get<lox::callable>(rhs._impl->value); },
+	  [&](const lox::type &t) -> bool
+	  { return t == std::get<lox::type>(rhs._impl->value); },
+	  [&](const lox::instance &i) -> bool
+	  { return i == std::get<lox::instance>(rhs._impl->value); },
 	});
 }
 
@@ -122,9 +170,8 @@ std::u8string lox::object::to_string() const
 	  [&](const double &number) -> std::u8string
 	  { return std::u8string(lox::as_u8string_view(std::to_string(number))); },
 	  [&](const bool &b) -> std::u8string { return b ? u8"true" : u8"false"; },
-	  [&](const callable_ref &c) -> std::u8string { return c->to_string(); },
-	  [&](const lox::klass_ptr &k) -> std::u8string { return k->to_string(); },
-	  [&](const lox::instance_ptr &i) -> std::u8string
-	  { return i->to_string(); },
+	  [&](const lox::callable &c) -> std::u8string { return c.to_string(); },
+	  [&](const lox::type &t) -> std::u8string { return t.to_string(); },
+	  [&](const lox::instance &i) -> std::u8string { return i.to_string(); },
 	});
 }

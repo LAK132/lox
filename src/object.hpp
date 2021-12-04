@@ -12,39 +12,42 @@
 namespace lox
 {
 	struct callable;
-	struct klass;
+	struct type;
 	struct instance;
 
 	struct object
 	{
-		using callable_ref = std::shared_ptr<lox::callable>;
-
 		using value_type = std::variant<std::monostate,
 		                                std::u8string,
 		                                double,
 		                                bool,
-		                                callable_ref,
-		                                std::shared_ptr<lox::klass>,
-		                                std::shared_ptr<lox::instance>>;
+		                                lox::callable,
+		                                lox::type,
+		                                lox::instance>;
 
-		value_type value;
+	private:
+		struct impl;
+		std::shared_ptr<impl> _impl;
 
-		// move these to the .cpp so we have access to the complete callable type
+	public:
 		object();
-		object(const object &);
-		object(object &&);
-		~object();
-		object &operator=(const object &);
-		object &operator=(object &&);
+		object(const object &) = default;
+		object &operator=(const object &) = default;
 
-		object(const value_type &v);
-		object(value_type &&v);
-		object &operator=(const value_type &v);
-		object &operator=(value_type &&v);
+		object(std::monostate value);
+		object(std::u8string value);
+		object(double value);
+		object(bool value);
+		object(const lox::callable &value);
+		object(const lox::type &value);
+		object(const lox::instance &value);
 
 		std::u8string to_string() const;
 
 		bool is_truthy() const;
+
+		value_type &value();
+		const value_type &value() const;
 
 		const std::u8string *get_string() const;
 
@@ -55,10 +58,11 @@ namespace lox
 		const lox::callable *get_callable() const;
 
 		// may be empty
-		std::shared_ptr<lox::klass> get_klass() const;
+		const lox::type *get_type() const;
 
 		// may be empty
-		std::shared_ptr<lox::instance> get_instance() const;
+		lox::instance *get_instance();
+		const lox::instance *get_instance() const;
 
 		bool operator==(const lox::object &rhs) const;
 
@@ -67,13 +71,13 @@ namespace lox
 		template<typename F>
 		auto visit(F &&f)
 		{
-			return std::visit(f, value);
+			return std::visit(f, value());
 		}
 
 		template<typename F>
 		auto visit(F &&f) const
 		{
-			return std::visit(f, value);
+			return std::visit(f, value());
 		}
 
 		friend inline std::ostream &operator<<(std::ostream &strm,

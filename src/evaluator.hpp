@@ -54,7 +54,7 @@ namespace lox
 		std::optional<lox::object> operator()(const lox::expr::variable &expr);
 
 		std::optional<std::u8string> operator()(const lox::stmt::block &stmt);
-		std::optional<std::u8string> operator()(const lox::stmt::klass &stmt);
+		std::optional<std::u8string> operator()(const lox::stmt::type &stmt);
 		std::optional<std::u8string> operator()(const lox::stmt::expr &stmt);
 		std::optional<std::u8string> operator()(const lox::stmt::branch &stmt);
 		std::optional<std::u8string> operator()(const lox::stmt::print &stmt);

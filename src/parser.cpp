@@ -661,7 +661,7 @@ lox::stmt_ptr lox::parser::parse_class_declaration()
 	             u8"Expected '}' after class body."))
 		return lox::stmt_ptr{};
 
-	return lox::stmt::make_klass({
+	return lox::stmt::make_type({
 	  .name       = *name,
 	  .superclass = std::move(superclass),
 	  .methods    = std::move(methods),

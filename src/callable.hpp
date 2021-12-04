@@ -15,34 +15,38 @@
 
 namespace lox
 {
-	struct klass;
+	struct type;
 
 	struct callable
 	{
-		struct native
-		{
-			size_t arity;
-			std::optional<lox::object> (*function)(lox::interpreter &,
-			                                       std::vector<lox::object> &&);
-		};
+	private:
+		struct impl;
 
-		struct interpreted
-		{
-			lox::stmt::function_ptr func;
-			lox::environment_ptr closure;
-			bool is_init;
-		};
+		std::shared_ptr<impl> _impl;
 
-		struct constructor
-		{
-			std::shared_ptr<lox::klass> klass;
-		};
+		using native_function_ptr_t = std::optional<lox::object> (*)(
+		  lox::interpreter &, std::vector<lox::object> &&);
 
-		std::variant<native, interpreted, constructor> value;
+	public:
+		callable() = delete;
 
-		static callable make_native(native &&c);
-		static callable make_interpreted(interpreted &&c);
-		static callable make_constructor(constructor &&c);
+		// native
+		callable(native_function_ptr_t function, size_t arity);
+
+		// interpreted
+		callable(lox::stmt::function_ptr function,
+		         lox::environment_ptr closure,
+		         bool is_init);
+
+		// constructor
+		callable(const lox::type &type);
+
+		[[nodiscard]] callable with_binds(
+		  std::initializer_list<std::pair<std::u8string_view, lox::object>> binds)
+		  const;
+
+		[[nodiscard]] callable with_binds(
+		  std::span<const std::pair<std::u8string_view, lox::object>> binds) const;
 
 		size_t arity() const;
 
@@ -102,11 +106,9 @@ namespace lox
 }
 
 #define LOX_CALLABLE_MAKE_NATIVE(...)                                         \
-	::lox::callable::make_native({                                              \
-	  .arity = ::lox::function_argument_count_v<decltype(__VA_ARGS__)> - 1,     \
-	  .function =                                                               \
-	    [](::lox::interpreter &interpreter,                                     \
-	       ::std::vector<::lox::object> &&arguments)                            \
+	::lox::callable(                                                            \
+	  [](::lox::interpreter &interpreter,                                       \
+	     ::std::vector<::lox::object> &&arguments)                              \
 	  {                                                                         \
 			using arguments_t = ::lox::function_arguments_t<decltype(__VA_ARGS__)>; \
 			constexpr size_t argument_count =                                       \
@@ -123,6 +125,6 @@ namespace lox
 			  ::std::move(arguments),                                               \
 			  ::std::make_index_sequence<argument_count - 1>{});                    \
 	  },                                                                        \
-	})
+	  ::lox::function_argument_count_v<decltype(__VA_ARGS__)> - 1)
 
 #endif

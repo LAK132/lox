@@ -196,7 +196,7 @@ std::optional<std::monostate> lox::resolver::operator()(
 }
 
 std::optional<std::monostate> lox::resolver::operator()(
-  const lox::stmt::klass &stmt)
+  const lox::stmt::type &stmt)
 {
 	lox::class_type enclosing_class_type = current_class;
 	current_class                        = lox::class_type::CLASS;

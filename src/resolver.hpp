@@ -76,7 +76,7 @@ namespace lox
 		std::optional<std::monostate> operator()(const lox::expr::variable &expr);
 
 		std::optional<std::monostate> operator()(const lox::stmt::block &stmt);
-		std::optional<std::monostate> operator()(const lox::stmt::klass &stmt);
+		std::optional<std::monostate> operator()(const lox::stmt::type &stmt);
 		std::optional<std::monostate> operator()(const lox::stmt::expr &stmt);
 		std::optional<std::monostate> operator()(const lox::stmt::branch &stmt);
 		std::optional<std::monostate> operator()(const lox::stmt::print &stmt);
