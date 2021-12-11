@@ -1,1 +1,0 @@
-./msvc_compile.sh && ./build/lox.exe $*
