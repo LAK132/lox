@@ -6,9 +6,12 @@
 #include "string_map.hpp"
 #include "token.hpp"
 
+#include <lak/optional.hpp>
+#include <lak/result.hpp>
+#include <lak/string.hpp>
+#include <lak/string_literals.hpp>
+
 #include <memory>
-#include <optional>
-#include <string>
 
 namespace lox
 {
@@ -19,40 +22,43 @@ namespace lox
 	{
 	private:
 		struct impl;
+		using impl_ptr = lak::shared_ref<impl>;
 
-		std::shared_ptr<impl> _impl;
+		impl_ptr _impl;
 
 	public:
 		type() = delete;
 
-		type(std::u8string_view name,
+		type(lak::u8string_view name,
 		     lox::string_map<char8_t, lox::object> methods);
 
-		type(std::u8string_view name,
+		type(lak::u8string_view name,
 		     lox::string_map<char8_t, lox::object> methods,
 		     const lox::type &superclass);
 
 		type(const type &) = default;
 		type &operator=(const type &) = default;
 
-		std::u8string &name();
-		const std::u8string &name() const;
+		lak::u8string &name();
+		const lak::u8string &name() const;
 
-		std::optional<type> &superclass();
-		const std::optional<type> &superclass() const;
+		lak::optional<type> &superclass();
+		const lak::optional<type> &superclass() const;
 
-		const lox::callable *find_method(std::u8string_view method_name) const;
-		const lox::callable *find_method(const lox::token &method_name) const;
+		lak::result<const lox::callable &> find_method(
+		  lak::u8string_view method_name) const;
+		lak::result<const lox::callable &> find_method(
+		  const lox::token &method_name) const;
 
-		std::optional<lox::callable> find_bound_method(
-		  std::u8string_view method_name, const lox::instance &instance) const;
-		std::optional<lox::callable> find_bound_method(
+		lak::result<lox::callable> find_bound_method(
+		  lak::u8string_view method_name, const lox::instance &instance) const;
+		lak::result<lox::callable> find_bound_method(
 		  const lox::token &method_name, const lox::instance &instance) const;
 
 		lox::callable &constructor();
 		const lox::callable &constructor() const;
 
-		std::u8string to_string() const;
+		lak::u8string to_string() const;
 
 		bool operator==(const type &rhs) const;
 
@@ -63,8 +69,9 @@ namespace lox
 	{
 	private:
 		struct impl;
+		using impl_ptr = lak::shared_ref<impl>;
 
-		std::shared_ptr<impl> _impl;
+		impl_ptr _impl;
 
 	public:
 		instance() = delete;
@@ -77,9 +84,9 @@ namespace lox
 
 		const lox::object &emplace(const lox::token &name, lox::object value);
 
-		std::optional<lox::object> find(const lox::token &name) const;
+		lak::result<lox::object> find(const lox::token &name) const;
 
-		std::u8string to_string() const;
+		lak::u8string to_string() const;
 
 		bool operator==(const instance &rhs) const;
 

@@ -6,9 +6,6 @@
 #include "stmt.hpp"
 #include "string_map.hpp"
 
-#include <optional>
-#include <string>
-#include <string_view>
 #include <vector>
 
 namespace lox
@@ -43,48 +40,44 @@ namespace lox
 		{
 		}
 
-		std::nullopt_t error(
+		lak::err_t<> error(
 		  const lox::token &token,
-		  std::u8string_view message,
+		  lak::u8string_view message,
 		  const std::source_location srcloc = std::source_location::current());
 
-		std::optional<std::monostate> resolve(
-		  std::span<const lox::stmt_ptr> statements);
+		lak::result<> resolve(lak::span<const lox::stmt_ptr> statements);
 
-		std::optional<std::monostate> resolve_function(
-		  const lox::stmt::function_ptr &func, lox::function_type type);
+		lak::result<> resolve_function(const lox::stmt::function_ptr &func,
+		                               lox::function_type type);
 
 		template<typename T>
 		void resolve_local(const T &expr, const lox::token &name);
 
-		std::optional<std::monostate> declare(const lox::token &name);
+		lak::result<> declare(const lox::token &name);
 		void define(const lox::token &name);
 
-		std::optional<std::monostate> operator()(const lox::expr::assign &expr);
-		std::optional<std::monostate> operator()(const lox::expr::binary &expr);
-		std::optional<std::monostate> operator()(const lox::expr::call &expr);
-		std::optional<std::monostate> operator()(const lox::expr::get &expr);
-		std::optional<std::monostate> operator()(const lox::expr::grouping &expr);
-		std::optional<std::monostate> operator()(const lox::expr::literal &expr);
-		std::optional<std::monostate> operator()(const lox::expr::logical &expr);
-		std::optional<std::monostate> operator()(const lox::expr::set &expr);
-		std::optional<std::monostate> operator()(
-		  const lox::expr::super_keyword &expr);
-		std::optional<std::monostate> operator()(
-		  const lox::expr::this_keyword &expr);
-		std::optional<std::monostate> operator()(const lox::expr::unary &expr);
-		std::optional<std::monostate> operator()(const lox::expr::variable &expr);
+		lak::result<> operator()(const lox::expr::assign &expr);
+		lak::result<> operator()(const lox::expr::binary &expr);
+		lak::result<> operator()(const lox::expr::call &expr);
+		lak::result<> operator()(const lox::expr::get &expr);
+		lak::result<> operator()(const lox::expr::grouping &expr);
+		lak::result<> operator()(const lox::expr::literal &expr);
+		lak::result<> operator()(const lox::expr::logical &expr);
+		lak::result<> operator()(const lox::expr::set &expr);
+		lak::result<> operator()(const lox::expr::super_keyword &expr);
+		lak::result<> operator()(const lox::expr::this_keyword &expr);
+		lak::result<> operator()(const lox::expr::unary &expr);
+		lak::result<> operator()(const lox::expr::variable &expr);
 
-		std::optional<std::monostate> operator()(const lox::stmt::block &stmt);
-		std::optional<std::monostate> operator()(const lox::stmt::type &stmt);
-		std::optional<std::monostate> operator()(const lox::stmt::expr &stmt);
-		std::optional<std::monostate> operator()(const lox::stmt::branch &stmt);
-		std::optional<std::monostate> operator()(const lox::stmt::print &stmt);
-		std::optional<std::monostate> operator()(const lox::stmt::var &stmt);
-		std::optional<std::monostate> operator()(const lox::stmt::loop &stmt);
-		std::optional<std::monostate> operator()(
-		  const lox::stmt::function_ptr &stmt);
-		std::optional<std::monostate> operator()(const lox::stmt::ret &stmt);
+		lak::result<> operator()(const lox::stmt::block &stmt);
+		lak::result<> operator()(const lox::stmt::type &stmt);
+		lak::result<> operator()(const lox::stmt::expr &stmt);
+		lak::result<> operator()(const lox::stmt::branch &stmt);
+		lak::result<> operator()(const lox::stmt::print &stmt);
+		lak::result<> operator()(const lox::stmt::var &stmt);
+		lak::result<> operator()(const lox::stmt::loop &stmt);
+		lak::result<> operator()(const lox::stmt::function_ptr &stmt);
+		lak::result<> operator()(const lox::stmt::ret &stmt);
 	};
 }
 

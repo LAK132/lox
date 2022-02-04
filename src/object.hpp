@@ -1,13 +1,12 @@
 #ifndef LOX_OBJECT_HPP
 #define LOX_OBJECT_HPP
 
-#include "overloaded.hpp"
-#include "string_hacks.hpp"
+#include <lak/memory.hpp>
+#include <lak/string_ostream.hpp>
+#include <lak/string_view.hpp>
+#include <lak/variant.hpp>
 
 #include <iostream>
-#include <memory>
-#include <string_view>
-#include <variant>
 
 namespace lox
 {
@@ -17,8 +16,8 @@ namespace lox
 
 	struct object
 	{
-		using value_type = std::variant<std::monostate,
-		                                std::u8string,
+		using value_type = lak::variant<lak::monostate,
+		                                lak::u8string,
 		                                double,
 		                                bool,
 		                                lox::callable,
@@ -27,29 +26,31 @@ namespace lox
 
 	private:
 		struct impl;
-		std::shared_ptr<impl> _impl;
+		using impl_ptr = lak::shared_ref<impl>;
+
+		impl_ptr _impl;
 
 	public:
 		object();
 		object(const object &) = default;
 		object &operator=(const object &) = default;
 
-		object(std::monostate value);
-		object(std::u8string value);
+		object(lak::monostate value);
+		object(lak::u8string value);
 		object(double value);
 		object(bool value);
 		object(const lox::callable &value);
 		object(const lox::type &value);
 		object(const lox::instance &value);
 
-		std::u8string to_string() const;
+		lak::u8string to_string() const;
 
 		bool is_truthy() const;
 
 		value_type &value();
 		const value_type &value() const;
 
-		const std::u8string *get_string() const;
+		const lak::u8string *get_string() const;
 
 		const double *get_number() const;
 
@@ -71,19 +72,20 @@ namespace lox
 		template<typename F>
 		auto visit(F &&f)
 		{
-			return std::visit(f, value());
+			return lak::visit(value(), f);
 		}
 
 		template<typename F>
 		auto visit(F &&f) const
 		{
-			return std::visit(f, value());
+			return lak::visit(value(), f);
 		}
 
 		friend inline std::ostream &operator<<(std::ostream &strm,
 		                                       const object &obj)
 		{
-			return strm << lox::as_astring_view(obj.to_string());
+			using lak::operator<<;
+			return strm << obj.to_string();
 		}
 	};
 }

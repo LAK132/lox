@@ -1,22 +1,19 @@
 #include "scanner.hpp"
 
-bool lox::is_digit(char8_t c)
-{
-	return c >= u8'0' && c <= u8'9';
-}
+#include <lak/char_utils.hpp>
 
-bool lox::is_alpha(char8_t c)
+bool lox::is_latin_letter(char8_t c)
 {
 	return (c >= u8'a' && c <= u8'z') || (c >= u8'A' && c <= u8'Z') ||
 	       c == u8'_';
 }
 
-bool lox::is_alphanumeric(char8_t c)
+bool lox::is_ident_char(char8_t c)
 {
-	return lox::is_digit(c) || lox::is_alpha(c);
+	return lak::is_alphanumeric(c) || lox::is_latin_letter(c);
 }
 
-lox::scanner::scanner(lox::interpreter &interp, std::u8string_view src)
+lox::scanner::scanner(lox::interpreter &interp, lak::u8string_view src)
 : interpreter(interp), source(src)
 {
 }
@@ -28,17 +25,17 @@ bool lox::scanner::empty() const
 
 char8_t lox::scanner::next()
 {
-	return source.at(current++);
+	return source[current++];
 }
 
 char8_t lox::scanner::peek() const
 {
-	return empty() ? u8'\0' : source.at(current);
+	return empty() ? u8'\0' : source[current];
 }
 
 char8_t lox::scanner::peek_next() const
 {
-	return current + 1 >= source.size() ? u8'\0' : source.at(current + 1);
+	return current + 1 >= source.size() ? u8'\0' : source[current + 1];
 }
 
 bool lox::scanner::match(char8_t expected)
@@ -50,10 +47,12 @@ bool lox::scanner::match(char8_t expected)
 
 void lox::scanner::add_token(lox::token_type type, lox::object literal)
 {
-	tokens.push_back(lox::token{.type    = type,
-	                            .lexeme  = source.substr(start, current - start),
-	                            .literal = std::move(literal),
-	                            .line    = line});
+	tokens.push_back(lox::token{
+	  .type    = type,
+	  .lexeme  = source.substr(start, current - start),
+	  .literal = lak::move(literal),
+	  .line    = line,
+	});
 }
 
 void lox::scanner::scan_string()
@@ -75,18 +74,18 @@ void lox::scanner::scan_string()
 
 	// trim the surrounding quotes
 	auto value = source.substr(start + 1, (current - 1) - (start + 1));
-	add_token(lox::token_type::STRING, lox::object{std::u8string(value)});
+	add_token(lox::token_type::STRING, lox::object{value.to_string()});
 }
 
 void lox::scanner::scan_number()
 {
-	while (lox::is_digit(peek())) next();
+	while (lak::is_alphanumeric(peek())) next();
 
-	if (peek() == '.' && lox::is_digit(peek_next()))
+	if (peek() == '.' && lak::is_alphanumeric(peek_next()))
 	{
 		// consume the .
 		next();
-		while (lox::is_digit(peek())) next();
+		while (lak::is_alphanumeric(peek())) next();
 	}
 
 	double number;
@@ -105,9 +104,9 @@ void lox::scanner::scan_number()
 
 void lox::scanner::scan_identifier()
 {
-	while (lox::is_alphanumeric(peek())) next();
-	if (auto iter = lox::keywords.find(
-	      std::u8string(source.substr(start, current - start)));
+	while (lox::is_ident_char(peek())) next();
+	if (auto iter =
+	      lox::keywords.find(source.substr(start, current - start).to_string());
 	    iter != lox::keywords.end())
 		add_token(iter->second);
 	else
@@ -173,9 +172,9 @@ void lox::scanner::scan_token()
 			break;
 
 		default:
-			if (lox::is_digit(c))
+			if (lak::is_alphanumeric(c))
 				scan_number();
-			else if (lox::is_alpha(c))
+			else if (lox::is_latin_letter(c))
 				scan_identifier();
 			else
 				interpreter.error(line, u8"Unexpected character.");
@@ -191,10 +190,12 @@ std::vector<lox::token> lox::scanner::scan_tokens()
 		scan_token();
 	}
 
-	tokens.push_back(lox::token{.type    = lox::token_type::EOF_TOK,
-	                            .lexeme  = u8"",
-	                            .literal = lox::object{},
-	                            .line    = line});
+	tokens.push_back(lox::token{
+	  .type    = lox::token_type::EOF_TOK,
+	  .lexeme  = u8"",
+	  .literal = lox::object{},
+	  .line    = line,
+	});
 
 	return tokens;
 }

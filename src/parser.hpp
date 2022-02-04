@@ -6,7 +6,9 @@
 #include "stmt.hpp"
 #include "token.hpp"
 
-#include <cstdint>
+#include <lak/result.hpp>
+#include <lak/stdint.hpp>
+
 #include <initializer_list>
 #include <source_location>
 #include <vector>
@@ -33,58 +35,61 @@ namespace lox
 
 		const lox::token *consume(
 		  lox::token_type type,
-		  std::u8string_view message_on_err,
+		  lak::u8string_view message_on_err,
 		  const std::source_location srcloc = std::source_location::current());
 
 		void sync();
 
-		lox::expr_ptr parse_primary();
+		lak::result<lox::expr_ptr> parse_primary();
 
-		lox::expr_ptr parse_call();
+		lak::result<lox::expr_ptr> parse_call();
 
-		lox::expr_ptr parse_unary();
+		lak::result<lox::expr_ptr> parse_unary();
 
-		lox::expr_ptr parse_factor();
+		lak::result<lox::expr_ptr> parse_factor();
 
-		lox::expr_ptr parse_term();
+		lak::result<lox::expr_ptr> parse_term();
 
-		lox::expr_ptr parse_comparison();
+		lak::result<lox::expr_ptr> parse_comparison();
 
-		lox::expr_ptr parse_equality();
+		lak::result<lox::expr_ptr> parse_equality();
 
-		lox::expr_ptr parse_and();
+		lak::result<lox::expr_ptr> parse_and();
 
-		lox::expr_ptr parse_or();
+		lak::result<lox::expr_ptr> parse_or();
 
-		lox::expr_ptr parse_assignment();
+		lak::result<lox::expr_ptr> parse_assignment();
 
-		lox::expr_ptr parse_expression();
+		lak::result<lox::expr_ptr> parse_expression();
 
-		lox::stmt_ptr parse_print_statement();
+		lak::result<lox::stmt_ptr> parse_print_statement();
 
-		lox::stmt_ptr parse_return_statement();
+		lak::result<lox::stmt_ptr> parse_return_statement();
 
-		lox::stmt_ptr parse_expression_statement();
+		lak::result<lox::stmt_ptr> parse_expression_statement();
 
-		lox::stmt_ptr parse_function(const std::u8string &kind);
+		lak::result<lox::stmt::function_ptr> parse_function_ptr(
+		  const lak::u8string &kind);
 
-		std::optional<std::vector<lox::stmt_ptr>> parse_block();
+		lak::result<lox::stmt_ptr> parse_function(const lak::u8string &kind);
 
-		lox::stmt_ptr parse_branch_statement();
+		lak::result<std::vector<lox::stmt_ptr>> parse_block();
 
-		lox::stmt_ptr parse_while_loop_statement();
+		lak::result<lox::stmt_ptr> parse_branch_statement();
 
-		lox::stmt_ptr parse_for_loop_statement();
+		lak::result<lox::stmt_ptr> parse_while_loop_statement();
 
-		lox::stmt_ptr parse_statement();
+		lak::result<lox::stmt_ptr> parse_for_loop_statement();
 
-		lox::stmt_ptr parse_var_declaration();
+		lak::result<lox::stmt_ptr> parse_statement();
 
-		lox::stmt_ptr parse_class_declaration();
+		lak::result<lox::stmt_ptr> parse_var_declaration();
 
-		lox::stmt_ptr parse_declaration();
+		lak::result<lox::stmt_ptr> parse_class_declaration();
 
-		std::vector<lox::stmt_ptr> parse();
+		lak::result<lox::stmt_ptr> parse_declaration();
+
+		lak::result<std::vector<lox::stmt_ptr>> parse();
 	};
 }
 

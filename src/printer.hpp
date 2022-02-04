@@ -2,51 +2,69 @@
 #define LOX_PRINTER_HPP
 
 #include "expr.hpp"
+#include "stmt.hpp"
 
-#include <initializer_list>
-#include <string_view>
+#include <lak/string.hpp>
 
 namespace lox
 {
-	struct prefix_ast_printer_t
+	struct dot_digraph_ast_printer_t
 	{
-		std::u8string parenthesize(std::u8string_view name,
-		                           std::initializer_list<lox::expr *> exprs) const;
-		std::u8string operator()(const lox::expr::assign &expr) const;
-		std::u8string operator()(const lox::expr::binary &expr) const;
-		std::u8string operator()(const lox::expr::call &expr) const;
-		std::u8string operator()(const lox::expr::get &expr) const;
-		std::u8string operator()(const lox::expr::grouping &expr) const;
-		std::u8string operator()(const lox::expr::literal &expr) const;
-		std::u8string operator()(const lox::expr::logical &expr) const;
-		std::u8string operator()(const lox::expr::set &expr) const;
-		std::u8string operator()(const lox::expr::super_keyword &expr) const;
-		std::u8string operator()(const lox::expr::this_keyword &expr) const;
-		std::u8string operator()(const lox::expr::unary &expr) const;
-		std::u8string operator()(const lox::expr::variable &expr) const;
+		static lak::u8string digraph_wrapper(lak::u8string &&str);
+
+		lak::u8string operator()(const lox::stmt::block &stmt) const;
+		lak::u8string operator()(const lox::stmt::type &stmt) const;
+		lak::u8string operator()(const lox::stmt::expr &stmt) const;
+		lak::u8string operator()(const lox::stmt::branch &stmt) const;
+		lak::u8string operator()(const lox::stmt::print &stmt) const;
+		lak::u8string operator()(const lox::stmt::var &stmt) const;
+		lak::u8string operator()(const lox::stmt::loop &stmt) const;
+		lak::u8string operator()(const lox::stmt::function_ptr &stmt) const;
+		lak::u8string operator()(const lox::stmt::ret &stmt) const;
+
+		lak::u8string operator()(const lox::expr::assign &expr) const;
+		lak::u8string operator()(const lox::expr::binary &expr) const;
+		lak::u8string operator()(const lox::expr::call &expr) const;
+		lak::u8string operator()(const lox::expr::get &expr) const;
+		lak::u8string operator()(const lox::expr::grouping &expr) const;
+		lak::u8string operator()(const lox::expr::literal &expr) const;
+		lak::u8string operator()(const lox::expr::logical &expr) const;
+		lak::u8string operator()(const lox::expr::set &expr) const;
+		lak::u8string operator()(const lox::expr::super_keyword &expr) const;
+		lak::u8string operator()(const lox::expr::this_keyword &expr) const;
+		lak::u8string operator()(const lox::expr::unary &expr) const;
+		lak::u8string operator()(const lox::expr::variable &expr) const;
 	};
 
-	static constexpr prefix_ast_printer_t prefix_ast_printer{};
+	static constexpr dot_digraph_ast_printer_t dot_digraph_ast_printer{};
 
-	struct postfix_ast_printer_t
+	struct dot_subgraph_ast_printer_t
 	{
-		std::u8string common(std::u8string_view name,
-		                     std::initializer_list<lox::expr *> exprs) const;
-		std::u8string operator()(const lox::expr::assign &expr) const;
-		std::u8string operator()(const lox::expr::binary &expr) const;
-		std::u8string operator()(const lox::expr::call &expr) const;
-		std::u8string operator()(const lox::expr::get &expr) const;
-		std::u8string operator()(const lox::expr::grouping &expr) const;
-		std::u8string operator()(const lox::expr::literal &expr) const;
-		std::u8string operator()(const lox::expr::logical &expr) const;
-		std::u8string operator()(const lox::expr::set &expr) const;
-		std::u8string operator()(const lox::expr::super_keyword &expr) const;
-		std::u8string operator()(const lox::expr::this_keyword &expr) const;
-		std::u8string operator()(const lox::expr::unary &expr) const;
-		std::u8string operator()(const lox::expr::variable &expr) const;
+		lak::u8string operator()(const lox::stmt::block &stmt) const;
+		lak::u8string operator()(const lox::stmt::type &stmt) const;
+		lak::u8string operator()(const lox::stmt::expr &stmt) const;
+		lak::u8string operator()(const lox::stmt::branch &stmt) const;
+		lak::u8string operator()(const lox::stmt::print &stmt) const;
+		lak::u8string operator()(const lox::stmt::var &stmt) const;
+		lak::u8string operator()(const lox::stmt::loop &stmt) const;
+		lak::u8string operator()(const lox::stmt::function_ptr &stmt) const;
+		lak::u8string operator()(const lox::stmt::ret &stmt) const;
+
+		lak::u8string operator()(const lox::expr::assign &expr) const;
+		lak::u8string operator()(const lox::expr::binary &expr) const;
+		lak::u8string operator()(const lox::expr::call &expr) const;
+		lak::u8string operator()(const lox::expr::get &expr) const;
+		lak::u8string operator()(const lox::expr::grouping &expr) const;
+		lak::u8string operator()(const lox::expr::literal &expr) const;
+		lak::u8string operator()(const lox::expr::logical &expr) const;
+		lak::u8string operator()(const lox::expr::set &expr) const;
+		lak::u8string operator()(const lox::expr::super_keyword &expr) const;
+		lak::u8string operator()(const lox::expr::this_keyword &expr) const;
+		lak::u8string operator()(const lox::expr::unary &expr) const;
+		lak::u8string operator()(const lox::expr::variable &expr) const;
 	};
 
-	static constexpr postfix_ast_printer_t postfix_ast_printer{};
+	static constexpr dot_subgraph_ast_printer_t dot_subgraph_ast_printer{};
 }
 
 #endif

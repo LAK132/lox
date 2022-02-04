@@ -5,12 +5,12 @@
 #include "object.hpp"
 #include "stmt.hpp"
 
-#include <cassert>
-#include <cstdint>
-#include <optional>
-#include <tuple>
-#include <utility>
-#include <variant>
+#include <lak/memory.hpp>
+#include <lak/span.hpp>
+#include <lak/string.hpp>
+#include <lak/string_view.hpp>
+#include <lak/tuple.hpp>
+
 #include <vector>
 
 namespace lox
@@ -21,10 +21,11 @@ namespace lox
 	{
 	private:
 		struct impl;
+		using impl_ptr = lak::shared_ref<impl>;
 
-		std::shared_ptr<impl> _impl;
+		impl_ptr _impl;
 
-		using native_function_ptr_t = std::optional<lox::object> (*)(
+		using native_function_ptr_t = lak::result<lox::object> (*)(
 		  lox::interpreter &, std::vector<lox::object> &&);
 
 	public:
@@ -42,19 +43,19 @@ namespace lox
 		callable(const lox::type &type);
 
 		[[nodiscard]] callable with_binds(
-		  std::initializer_list<std::pair<std::u8string_view, lox::object>> binds)
+		  std::initializer_list<lak::pair<lak::u8string_view, lox::object>> binds)
 		  const;
 
 		[[nodiscard]] callable with_binds(
-		  std::span<const std::pair<std::u8string_view, lox::object>> binds) const;
+		  lak::span<const lak::pair<lak::u8string_view, lox::object>> binds) const;
 
 		size_t arity() const;
 
-		std::u8string to_string() const;
+		lak::u8string to_string() const;
 
 		bool operator==(const callable &rhs) const;
 
-		std::optional<lox::object> operator()(
+		lak::result<lox::object> operator()(
 		  lox::interpreter &interpreter,
 		  std::vector<lox::object> &&arguments) const;
 	};
@@ -66,7 +67,7 @@ namespace lox
 	struct function_signature<R (*)(ARGS...)>
 	{
 		using return_type                      = R;
-		using arguments                        = std::tuple<ARGS...>;
+		using arguments                        = lak::tuple<ARGS...>;
 		static constexpr size_t argument_count = sizeof...(ARGS);
 	};
 
@@ -74,7 +75,7 @@ namespace lox
 	struct function_signature<R(ARGS...)>
 	{
 		using return_type                      = R;
-		using arguments                        = std::tuple<ARGS...>;
+		using arguments                        = lak::tuple<ARGS...>;
 		static constexpr size_t argument_count = sizeof...(ARGS);
 	};
 
@@ -90,18 +91,18 @@ namespace lox
 
 	template<typename... ARGS>
 	using callable_function_ptr_t =
-	  std::optional<lox::object> (*)(lox::interpreter &, ARGS...);
+	  lak::result<lox::object> (*)(lox::interpreter &, ARGS...);
 
 	template<typename... ARGS, size_t... I>
-	inline std::optional<lox::object> call_native(
+	inline lak::result<lox::object> call_native(
 	  callable_function_ptr_t<ARGS...> function,
 	  lox::interpreter &interpreter,
 	  std::vector<lox::object> &&arguments,
-	  std::index_sequence<I...>)
+	  lak::index_sequence<I...>)
 	{
 		static_assert(sizeof...(ARGS) == sizeof...(I));
-		assert(sizeof...(ARGS) == arguments.size());
-		return function(interpreter, std::move(arguments[I])...);
+		ASSERT_EQUAL(sizeof...(ARGS), arguments.size());
+		return function(interpreter, lak::move(arguments[I])...);
 	}
 }
 
@@ -115,15 +116,15 @@ namespace lox
 			  ::lox::function_argument_count_v<decltype(__VA_ARGS__)>;              \
 			static_assert(argument_count >= 1, "Requires at least 1 argument");     \
 			static_assert(                                                          \
-			  ::std::is_same_v<                                                     \
-			    ::std::remove_cvref_t<::std::tuple_element_t<0, arguments_t>>,      \
+			  ::lak::is_same_v<                                                     \
+			    ::lak::remove_cvref_t<::lak::tuple_element_t<0, arguments_t>>,      \
 			    ::lox::interpreter>,                                                \
 			  "First argument must be an interpreter");                             \
 			return ::lox::call_native(                                              \
 			  (__VA_ARGS__),                                                        \
 			  interpreter,                                                          \
-			  ::std::move(arguments),                                               \
-			  ::std::make_index_sequence<argument_count - 1>{});                    \
+			  ::lak::move(arguments),                                               \
+			  ::lak::make_index_sequence<argument_count - 1>{});                    \
 	  },                                                                        \
 	  ::lox::function_argument_count_v<decltype(__VA_ARGS__)> - 1)
 

@@ -13,6 +13,5 @@ lox = files([
   'resolver.cpp',
   'scanner.cpp',
   'stmt.cpp',
-  'string_hacks.cpp',
   'token.cpp',
 ])

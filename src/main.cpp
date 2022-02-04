@@ -2,71 +2,81 @@
 #include "interpreter.hpp"
 #include "lox.hpp"
 #include "object.hpp"
-#include "overloaded.hpp"
+#include "parser.hpp"
 #include "printer.hpp"
 #include "scanner.hpp"
-#include "string_hacks.hpp"
 #include "token.hpp"
+
+#include <lak/string_literals.hpp>
+#include <lak/string_ostream.hpp>
 
 #include <iostream>
 
 int main(int argc, char *argv[])
 {
-	auto expr = lox::expr::make_binary({
-	  .left = lox::expr::make_unary({
-	    .op =
-	      lox::token{
-	        .type   = lox::token_type::MINUS,
-	        .lexeme = u8"-",
-	      },
-	    .right = lox::expr::make_literal({
-	      .value = lox::object{123.0},
-	    }),
-	  }),
-	  .op =
-	    lox::token{
-	      .type   = lox::token_type::STAR,
-	      .lexeme = u8"*",
-	    },
-	  .right = lox::expr::make_grouping({
-	    .expression = lox::expr::make_literal({
-	      .value = 45.67,
-	    }),
-	  }),
-	});
+	if (argc > 3) return lox::usage();
 
-	std::vector<lox::expr_ptr> args;
-	args.push_back(std::move(expr));
-	expr = lox::expr::make_call({
-	  .callee =
-	    lox::expr::make_variable({.name =
-	                                lox::token{
-	                                  .type   = lox::token_type::IDENTIFIER,
-	                                  .lexeme = u8"f",
-	                                }}),
-	  .paren =
-	    lox::token{
-	      .type   = lox::token_type::RIGHT_PAREN,
-	      .lexeme = u8")",
-	    },
-	  .arguments = std::move(args),
-	});
+	lak::optional<std::filesystem::path> file;
+	bool print_dot = false;
+
+	while (argc-- > 1)
+	{
+		const auto arg{lak::astring_view::from_c_str(argv[argc])};
+		if (arg == "--help"_view)
+		{
+			lox::usage();
+			return EXIT_SUCCESS;
+		}
+		else if (arg == "--dot"_view)
+		{
+			if (print_dot) return lox::usage();
+			print_dot = true;
+		}
+		else
+		{
+			file = lak::astring(arg);
+		}
+	}
 
 	lox::interpreter interpreter;
 
-	if (argc > 2)
-		return lox::usage();
-	else if (argc == 2)
+	if (print_dot)
 	{
-		if (std::string("--prefix") == argv[1])
-			std::cout << lox::as_astring_view(expr->visit(lox::prefix_ast_printer))
-			          << "\n";
-		else if (std::string("--postfix") == argv[1])
-			std::cout << lox::as_astring_view(expr->visit(lox::postfix_ast_printer))
-			          << "\n";
-		else
-			return interpreter.run_file(std::filesystem::path(argv[1]));
+		if (!file)
+		{
+			std::cerr << "Missing file.\n";
+			return lox::usage();
+		}
+
+		return interpreter.init_globals().parse_file(*file).visit(lak::overloaded{
+		  [](lak::monostate) -> int
+		  {
+			  std::cerr << "Failed to parse file.\n";
+			  return EXIT_FAILURE;
+		  },
+		  [](const std::vector<lox::stmt_ptr> &stmt) -> int
+		  {
+			  using lak::operator<<;
+			  lak::u8string result;
+			  for (const auto &s : stmt)
+				  result += s->visit(lox::dot_subgraph_ast_printer);
+			  std::cout << lox::dot_digraph_ast_printer.digraph_wrapper(
+			                 lak::move(result))
+			            << "\n";
+			  return EXIT_SUCCESS;
+		  }});
+	}
+	else if (file)
+	{
+		return interpreter.init_globals()
+		           .run_file(std::filesystem::path(argv[1]))
+		           .is_ok()
+		         ? EXIT_SUCCESS
+		         : EXIT_FAILURE;
 	}
 	else
-		return interpreter.run_prompt();
+	{
+		return interpreter.init_globals().run_prompt().is_ok() ? EXIT_SUCCESS
+		                                                       : EXIT_FAILURE;
+	}
 }

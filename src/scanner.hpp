@@ -5,47 +5,46 @@
 #include "object.hpp"
 #include "token.hpp"
 
-#include <string_view>
+#include <lak/string_view.hpp>
+
 #include <unordered_map>
 #include <vector>
 
 namespace lox
 {
-	bool is_digit(char8_t c);
+	bool is_latin_letter(char8_t c);
 
-	bool is_alpha(char8_t c);
+	bool is_ident_char(char8_t c);
 
-	bool is_alphanumeric(char8_t c);
-
-	const std::unordered_map<std::u8string, lox::token_type> keywords = {
-	  {u8"and", lox::token_type::AND},
-	  {u8"class", lox::token_type::CLASS},
-	  {u8"else", lox::token_type::ELSE},
-	  {u8"false", lox::token_type::FALSE},
-	  {u8"for", lox::token_type::FOR},
-	  {u8"fun", lox::token_type::FUN},
-	  {u8"if", lox::token_type::IF},
-	  {u8"nil", lox::token_type::NIL},
-	  {u8"or", lox::token_type::OR},
-	  {u8"print", lox::token_type::PRINT},
-	  {u8"return", lox::token_type::RETURN},
-	  {u8"super", lox::token_type::SUPER},
-	  {u8"this", lox::token_type::THIS},
-	  {u8"true", lox::token_type::TRUE},
-	  {u8"var", lox::token_type::VAR},
-	  {u8"while", lox::token_type::WHILE},
+	const std::unordered_map<lak::u8string, lox::token_type> keywords = {
+	  {u8"and"_str, lox::token_type::AND},
+	  {u8"class"_str, lox::token_type::CLASS},
+	  {u8"else"_str, lox::token_type::ELSE},
+	  {u8"false"_str, lox::token_type::FALSE},
+	  {u8"for"_str, lox::token_type::FOR},
+	  {u8"fun"_str, lox::token_type::FUN},
+	  {u8"if"_str, lox::token_type::IF},
+	  {u8"nil"_str, lox::token_type::NIL},
+	  {u8"or"_str, lox::token_type::OR},
+	  {u8"print"_str, lox::token_type::PRINT},
+	  {u8"return"_str, lox::token_type::RETURN},
+	  {u8"super"_str, lox::token_type::SUPER},
+	  {u8"this"_str, lox::token_type::THIS},
+	  {u8"true"_str, lox::token_type::TRUE},
+	  {u8"var"_str, lox::token_type::VAR},
+	  {u8"while"_str, lox::token_type::WHILE},
 	};
 
 	struct scanner
 	{
 		lox::interpreter &interpreter;
-		std::u8string_view source;
+		lak::u8string_view source;
 		std::vector<lox::token> tokens;
 		size_t start   = 0;
 		size_t current = 0;
 		size_t line    = 1;
 
-		scanner(lox::interpreter &interp, std::u8string_view src);
+		scanner(lox::interpreter &interp, lak::u8string_view src);
 
 		bool empty() const;
 

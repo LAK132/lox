@@ -1,6 +1,6 @@
 #include "parser.hpp"
 
-#include <assert.h>
+#include <lak/debug.hpp>
 
 bool lox::parser::empty() const
 {
@@ -44,7 +44,7 @@ bool lox::parser::match(std::initializer_list<lox::token_type> types)
 }
 
 const lox::token *lox::parser::consume(lox::token_type type,
-                                       std::u8string_view message_on_err,
+                                       lak::u8string_view message_on_err,
                                        const std::source_location srcloc)
 {
 	if (check(type)) return &next();
@@ -76,51 +76,55 @@ void lox::parser::sync()
 	}
 }
 
-lox::expr_ptr lox::parser::parse_primary()
+lak::result<lox::expr_ptr> lox::parser::parse_primary()
 {
 	using enum lox::token_type;
-	if (match({FALSE})) return lox::expr::make_literal({.value = false});
-	if (match({TRUE})) return lox::expr::make_literal({.value = true});
-	if (match({NIL})) return lox::expr::make_literal({});
+	if (match({FALSE}))
+		return lak::ok_t{lox::expr::make_literal({.value = false})};
+	if (match({TRUE}))
+		return lak::ok_t{lox::expr::make_literal({.value = true})};
+	if (match({NIL})) return lak::ok_t{lox::expr::make_literal({})};
 
 	if (match({NUMBER, STRING}))
-		return lox::expr::make_literal({.value = last().literal});
+		return lak::ok_t{lox::expr::make_literal({.value = last().literal})};
 
 	if (match({SUPER}))
 	{
 		lox::token keyword = last();
 
-		if (!consume(DOT, u8"Expected '.' after 'super'.")) return lox::expr_ptr{};
+		if (!consume(DOT, u8"Expected '.' after 'super'.")) return lak::err_t{};
 
 		const lox::token *method =
 		  consume(IDENTIFIER, u8"Expected superclass method name.");
-		if (!method) return lox::expr_ptr{};
+		if (!method) return lak::err_t{};
 
-		return lox::expr::make_super({
-		  .keyword = std::move(keyword),
+		return lak::ok_t{lox::expr::make_super({
+		  .keyword = lak::move(keyword),
 		  .method  = *method,
-		});
+		})};
 	}
 
-	if (match({THIS})) return lox::expr::make_this({.keyword = last()});
+	if (match({THIS}))
+		return lak::ok_t{lox::expr::make_this({.keyword = last()})};
 
-	if (match({IDENTIFIER})) return lox::expr::make_variable({.name = last()});
+	if (match({IDENTIFIER}))
+		return lak::ok_t{lox::expr::make_variable({.name = last()})};
 
 	if (match({LEFT_PAREN}))
 	{
-		lox::expr_ptr e = parse_expression();
+		RES_TRY_ASSIGN(lox::expr_ptr e =, parse_expression());
 		if (!consume(RIGHT_PAREN, u8"Expected ')' after expression."))
-			return lox::expr_ptr{};
-		return lox::expr::make_grouping({.expression = std::move(e)});
+			return lak::err_t{};
+		return lak::ok_t{lox::expr::make_grouping({.expression = lak::move(e)})};
 	}
 
 	interpreter.error(peek(), u8"Expected expression.");
-	return lox::expr_ptr{};
+	return lak::err_t{};
 }
 
-lox::expr_ptr lox::parser::parse_call()
+lak::result<lox::expr_ptr> lox::parser::parse_call()
 {
-	auto finish_call = [&](lox::expr_ptr &&callee) -> lox::expr_ptr
+	auto finish_call = [&](lox::expr_ptr &&callee) -> lak::result<lox::expr_ptr>
 	{
 		std::vector<lox::expr_ptr> arguments;
 		if (!check(lox::token_type::RIGHT_PAREN))
@@ -130,282 +134,270 @@ lox::expr_ptr lox::parser::parse_call()
 				if (arguments.size() >= 255)
 				{
 					interpreter.error(peek(), u8"Can't have more than 255 arguments.");
-					return lox::expr_ptr{};
+					return lak::err_t{};
 				}
-				lox::expr_ptr argument = parse_expression();
-				if (!argument) return lox::expr_ptr{};
+				RES_TRY_ASSIGN(lox::expr_ptr argument =, parse_expression());
 
-				arguments.push_back(std::move(argument));
+				arguments.push_back(lak::move(argument));
 			} while (match({lox::token_type::COMMA}));
 		}
 
 		const lox::token *paren =
 		  consume(lox::token_type::RIGHT_PAREN, u8"Expected ')' after arguments.");
-		if (!paren) return lox::expr_ptr{};
+		if (!paren) return lak::err_t{};
 
-		return lox::expr::make_call({
-		  .callee    = std::move(callee),
+		return lak::ok_t{lox::expr::make_call({
+		  .callee    = lak::move(callee),
 		  .paren     = *paren,
-		  .arguments = std::move(arguments),
-		});
+		  .arguments = lak::move(arguments),
+		})};
 	};
 
-	lox::expr_ptr expr = parse_primary();
+	RES_TRY_ASSIGN(lox::expr_ptr expr =, parse_primary());
 
 	for (;;)
 	{
 		if (match({lox::token_type::LEFT_PAREN}))
 		{
-			expr = finish_call(std::move(expr));
-			if (!expr) return lox::expr_ptr{};
+			RES_TRY_ASSIGN(expr =, finish_call(lak::move(expr)));
 		}
 		else if (match({lox::token_type::DOT}))
 		{
 			const lox::token *name = consume(lox::token_type::IDENTIFIER,
 			                                 u8"Expected property name after '.'.");
-			if (!name) return lox::expr_ptr{};
+			if (!name) return lak::err_t{};
 			expr = lox::expr::make_get({
-			  .object = std::move(expr),
+			  .object = lak::move(expr),
 			  .name   = *name,
 			});
-			if (!expr) return lox::expr_ptr{};
 		}
 		else
 			break;
 	}
 
-	return expr;
+	return lak::move_ok(expr);
 }
 
-lox::expr_ptr lox::parser::parse_unary()
+lak::result<lox::expr_ptr> lox::parser::parse_unary()
 {
 	using enum lox::token_type;
 	if (match({BANG, MINUS}))
 	{
-		lox::token op       = last();
-		lox::expr_ptr right = parse_unary();
-		if (!right) return lox::expr_ptr{};
+		lox::token op = last();
+		RES_TRY_ASSIGN(lox::expr_ptr right =, parse_unary());
 
-		return lox::expr::make_unary({
+		return lak::ok_t{lox::expr::make_unary({
 		  .op    = op,
-		  .right = std::move(right),
-		});
+		  .right = lak::move(right),
+		})};
 	}
 
 	return parse_call();
 }
 
-lox::expr_ptr lox::parser::parse_factor()
+lak::result<lox::expr_ptr> lox::parser::parse_factor()
 {
-	lox::expr_ptr e = parse_unary();
-	if (!e) return lox::expr_ptr{};
+	RES_TRY_ASSIGN(lox::expr_ptr expr =, parse_unary());
 
 	using enum lox::token_type;
 	while (match({SLASH, STAR}))
 	{
-		lox::token op       = last();
-		lox::expr_ptr right = parse_unary();
-		if (!right) return lox::expr_ptr{};
+		lox::token op = last();
+		RES_TRY_ASSIGN(lox::expr_ptr right =, parse_unary());
 
-		e = lox::expr::make_binary({
-		  .left  = std::move(e),
+		expr = lox::expr::make_binary({
+		  .left  = lak::move(expr),
 		  .op    = op,
-		  .right = std::move(right),
+		  .right = lak::move(right),
 		});
 	}
 
-	return e;
+	return lak::move_ok(expr);
 }
 
-lox::expr_ptr lox::parser::parse_term()
+lak::result<lox::expr_ptr> lox::parser::parse_term()
 {
-	lox::expr_ptr e = parse_factor();
-	if (!e) return lox::expr_ptr{};
+	RES_TRY_ASSIGN(lox::expr_ptr expr =, parse_factor());
 
 	using enum lox::token_type;
 	while (match({MINUS, PLUS}))
 	{
-		lox::token op       = last();
-		lox::expr_ptr right = parse_factor();
-		if (!right) return lox::expr_ptr{};
+		lox::token op = last();
+		RES_TRY_ASSIGN(lox::expr_ptr right =, parse_factor());
 
-		e = lox::expr::make_binary({
-		  .left  = std::move(e),
+		expr = lox::expr::make_binary({
+		  .left  = lak::move(expr),
 		  .op    = op,
-		  .right = std::move(right),
+		  .right = lak::move(right),
 		});
 	}
 
-	return e;
+	return lak::move_ok(expr);
 }
 
-lox::expr_ptr lox::parser::parse_comparison()
+lak::result<lox::expr_ptr> lox::parser::parse_comparison()
 {
-	lox::expr_ptr e = parse_term();
-	if (!e) return lox::expr_ptr{};
+	RES_TRY_ASSIGN(lox::expr_ptr expr =, parse_term());
 
 	using enum lox::token_type;
 	while (match({GREATER, GREATER_EQUAL, LESS, LESS_EQUAL}))
 	{
-		lox::token op       = last();
-		lox::expr_ptr right = parse_term();
-		if (!right) return lox::expr_ptr{};
+		lox::token op = last();
+		RES_TRY_ASSIGN(lox::expr_ptr right =, parse_term());
 
-		e = lox::expr::make_binary({
-		  .left  = std::move(e),
+		expr = lox::expr::make_binary({
+		  .left  = lak::move(expr),
 		  .op    = op,
-		  .right = std::move(right),
+		  .right = lak::move(right),
 		});
 	}
 
-	return e;
+	return lak::move_ok(expr);
 }
 
-lox::expr_ptr lox::parser::parse_equality()
+lak::result<lox::expr_ptr> lox::parser::parse_equality()
 {
-	lox::expr_ptr e = parse_comparison();
-	if (!e) return lox::expr_ptr{};
+	RES_TRY_ASSIGN(lox::expr_ptr expr =, parse_comparison());
 
 	using enum lox::token_type;
 	while (match({BANG_EQUAL, EQUAL_EQUAL}))
 	{
-		lox::token op       = last();
-		lox::expr_ptr right = parse_comparison();
-		if (!right) return lox::expr_ptr{};
+		lox::token op = last();
+		RES_TRY_ASSIGN(lox::expr_ptr right =, parse_comparison());
 
-		e = lox::expr::make_binary({
-		  .left  = std::move(e),
+		expr = lox::expr::make_binary({
+		  .left  = lak::move(expr),
 		  .op    = op,
-		  .right = std::move(right),
+		  .right = lak::move(right),
 		});
 	}
 
-	return e;
+	return lak::move_ok(expr);
 }
 
-lox::expr_ptr lox::parser::parse_and()
+lak::result<lox::expr_ptr> lox::parser::parse_and()
 {
-	lox::expr_ptr expr = parse_equality();
-	if (!expr) return lox::expr_ptr{};
+	RES_TRY_ASSIGN(lox::expr_ptr expr =, parse_equality());
 
 	while (match({lox::token_type::AND}))
 	{
-		lox::token op       = last();
-		lox::expr_ptr right = parse_equality();
-		if (!right) return lox::expr_ptr{};
+		lox::token op = last();
+		RES_TRY_ASSIGN(lox::expr_ptr right =, parse_equality());
 
 		expr = lox::expr::make_logical({
-		  .left  = std::move(expr),
+		  .left  = lak::move(expr),
 		  .op    = op,
-		  .right = std::move(right),
+		  .right = lak::move(right),
 		});
 	}
 
-	return expr;
+	return lak::move_ok(expr);
 }
 
-lox::expr_ptr lox::parser::parse_or()
+lak::result<lox::expr_ptr> lox::parser::parse_or()
 {
-	lox::expr_ptr expr = parse_and();
-	if (!expr) return lox::expr_ptr{};
+	RES_TRY_ASSIGN(lox::expr_ptr expr =, parse_and());
 
 	while (match({lox::token_type::OR}))
 	{
-		lox::token op       = last();
-		lox::expr_ptr right = parse_and();
-		if (!right) return lox::expr_ptr{};
+		lox::token op = last();
+		RES_TRY_ASSIGN(lox::expr_ptr right =, parse_and());
 
 		expr = lox::expr::make_logical({
-		  .left  = std::move(expr),
+		  .left  = lak::move(expr),
 		  .op    = op,
-		  .right = std::move(right),
+		  .right = lak::move(right),
 		});
 	}
 
-	return expr;
+	return lak::move_ok(expr);
 }
 
-lox::expr_ptr lox::parser::parse_assignment()
+lak::result<lox::expr_ptr> lox::parser::parse_assignment()
 {
-	lox::expr_ptr expr = parse_or();
-	if (!expr) return lox::expr_ptr{};
+	RES_TRY_ASSIGN(lox::expr_ptr expr =, parse_or());
 
 	if (match({lox::token_type::EQUAL}))
 	{
-		lox::token equals   = last();
-		lox::expr_ptr value = parse_assignment();
-		if (!value) return lox::expr_ptr{};
+		lox::token equals = last();
+		RES_TRY_ASSIGN(lox::expr_ptr value =, parse_assignment());
 
-		if (std::holds_alternative<lox::expr::variable>(expr->value))
+		if_ref (const lox::expr::variable & var,
+		        expr->value.template get<lox::expr::variable>())
 		{
-			return lox::expr::make_assign({
-			  .name  = std::get<lox::expr::variable>(expr->value).name,
-			  .value = std::move(value),
-			});
+			return lak::ok_t{lox::expr::make_assign({
+			  .name  = var.name,
+			  .value = lak::move(value),
+			})};
 		}
-		else if (std::holds_alternative<lox::expr::get>(expr->value))
+		else if_ref (lox::expr::get & get,
+		             expr->value.template get<lox::expr::get>())
 		{
-			lox::expr::get &get = std::get<lox::expr::get>(expr->value);
-			return lox::expr::make_set({
-			  .object = std::move(get.object),
-			  .name   = std::move(get.name),
-			  .value  = std::move(value),
-			});
+			return lak::ok_t{lox::expr::make_set({
+			  .object = lak::move(get.object),
+			  .name   = lak::move(get.name),
+			  .value  = lak::move(value),
+			})};
 		}
 
 		interpreter.error(equals, u8"Invalid assignment target.");
-		return lox::expr_ptr{};
+		return lak::err_t{};
 	}
 
-	return expr;
+	return lak::move_ok(expr);
 }
 
-lox::expr_ptr lox::parser::parse_expression()
+lak::result<lox::expr_ptr> lox::parser::parse_expression()
 {
 	return parse_assignment();
 }
 
-lox::stmt_ptr lox::parser::parse_print_statement()
+lak::result<lox::stmt_ptr> lox::parser::parse_print_statement()
 {
-	lox::expr_ptr value = parse_expression();
+	RES_TRY_ASSIGN(lox::expr_ptr value =, parse_expression());
 	if (!consume(lox::token_type::SEMICOLON, u8"Expected ';' after value."))
-		return lox::stmt_ptr{};
-	return lox::stmt::make_print({.expression = std::move(value)});
+		return lak::err_t{};
+	return lak::ok_t{lox::stmt::make_print({.expression = lak::move(value)})};
 }
 
-lox::stmt_ptr lox::parser::parse_return_statement()
+lak::result<lox::stmt_ptr> lox::parser::parse_return_statement()
 {
 	lox::token keyword = last();
-	lox::expr_ptr value =
-	  check(lox::token_type::SEMICOLON) ? lox::expr_ptr{} : parse_expression();
+	lak::optional<lox::expr_ptr> value;
+
+	if (!check(lox::token_type::SEMICOLON))
+	{
+		RES_TRY_ASSIGN(value =, parse_expression());
+	}
 
 	if (!consume(lox::token_type::SEMICOLON,
 	             u8"Expected ';' after return value."))
-		return lox::stmt_ptr{};
+		return lak::err_t{};
 
-	return lox::stmt::make_ret({
+	return lak::ok_t{lox::stmt::make_ret({
 	  .keyword = keyword,
-	  .value   = std::move(value),
-	});
+	  .value   = lak::move(value),
+	})};
 }
 
-lox::stmt_ptr lox::parser::parse_expression_statement()
+lak::result<lox::stmt_ptr> lox::parser::parse_expression_statement()
 {
-	lox::expr_ptr expr = parse_expression();
+	RES_TRY_ASSIGN(lox::expr_ptr expr =, parse_expression());
 	if (!consume(lox::token_type::SEMICOLON, u8"Expected ';' after expression."))
-		return lox::stmt_ptr{};
-	return lox::stmt::make_expr({.expression = std::move(expr)});
+		return lak::err_t{};
+	return lak::ok_t{lox::stmt::make_expr({.expression = lak::move(expr)})};
 }
 
-lox::stmt_ptr lox::parser::parse_function(const std::u8string &kind)
+lak::result<lox::stmt::function_ptr> lox::parser::parse_function_ptr(
+  const lak::u8string &kind)
 {
 	const lox::token *name =
 	  consume(lox::token_type::IDENTIFIER, u8"Expected " + kind + u8" name.");
-	if (!name) return lox::stmt_ptr{};
+	if (!name) return lak::err_t{};
 
 	if (!consume(lox::token_type::LEFT_PAREN,
 	             u8"Expected '(' after " + kind + u8" name."))
-		return lox::stmt_ptr{};
+		return lak::err_t{};
 
 	std::vector<lox::token> parameters;
 	if (!check(lox::token_type::RIGHT_PAREN))
@@ -415,176 +407,168 @@ lox::stmt_ptr lox::parser::parse_function(const std::u8string &kind)
 			if (parameters.size() >= 255)
 			{
 				interpreter.error(peek(), u8"Can't have more than 255 parameters.");
-				return lox::stmt_ptr{};
+				return lak::err_t{};
 			}
 
-			if (const lox::token *param =
-			      consume(lox::token_type::IDENTIFIER, u8"Expected parameter name.");
-			    param)
-				parameters.emplace_back(*param);
+			if_ref (const lox::token & param,
+			        consume(lox::token_type::IDENTIFIER,
+			                u8"Expected parameter name."))
+				parameters.emplace_back(param);
 			else
-				return lox::stmt_ptr{};
+				return lak::err_t{};
 		} while (match({lox::token_type::COMMA}));
 	}
 
 	if (!consume(lox::token_type::RIGHT_PAREN,
 	             u8"Expected '(' after parameters."))
-		return lox::stmt_ptr{};
+		return lak::err_t{};
 
 	if (!consume(lox::token_type::LEFT_BRACE,
 	             u8"Expected '{' before " + kind + u8" body."))
-		return lox::stmt_ptr{};
+		return lak::err_t{};
 
-	std::optional<std::vector<lox::stmt_ptr>> maybe_body = parse_block();
-	if (!maybe_body) return lox::stmt_ptr{};
+	RES_TRY_ASSIGN(std::vector<lox::stmt_ptr> body =, parse_block());
 
-	return lox::stmt::make_function({
+	return lak::ok_t{lox::stmt::make_function_ptr({
 	  .name       = *name,
-	  .parameters = std::move(parameters),
-	  .body       = std::move(*maybe_body),
-	});
+	  .parameters = lak::move(parameters),
+	  .body       = lak::move(body),
+	})};
 }
 
-std::optional<std::vector<lox::stmt_ptr>> lox::parser::parse_block()
+lak::result<lox::stmt_ptr> lox::parser::parse_function(
+  const lak::u8string &kind)
+{
+	return parse_function_ptr(kind).map(lox::stmt::make_function_from_ptr);
+}
+
+lak::result<std::vector<lox::stmt_ptr>> lox::parser::parse_block()
 {
 	std::vector<lox::stmt_ptr> result;
 
 	while (!check(lox::token_type::RIGHT_BRACE) && !empty())
 	{
-		lox::stmt_ptr decl = parse_declaration();
-		if (!decl) return std::nullopt;
-		result.push_back(std::move(decl));
+		RES_TRY_ASSIGN(lox::stmt_ptr decl =, parse_declaration());
+		result.push_back(lak::move(decl));
 	}
 
 	if (!consume(lox::token_type::RIGHT_BRACE, u8"Expected '}' after block."))
-		return std::nullopt;
+		return lak::err_t{};
 
-	return result;
+	return lak::move_ok(result);
 }
 
-lox::stmt_ptr lox::parser::parse_branch_statement()
+lak::result<lox::stmt_ptr> lox::parser::parse_branch_statement()
 {
 	if (!consume(lox::token_type::LEFT_PAREN, u8"Expected '(' after 'if'."))
-		return lox::stmt_ptr{};
+		return lak::err_t{};
 
-	lox::expr_ptr condition = parse_expression();
-	if (!condition) return lox::stmt_ptr{};
+	RES_TRY_ASSIGN(lox::expr_ptr condition =, parse_expression());
 
 	if (!consume(lox::token_type::RIGHT_PAREN,
 	             u8"Expected '(' after if condition."))
-		return lox::stmt_ptr{};
+		return lak::err_t{};
 
-	lox::stmt_ptr then_branch = parse_statement();
-	if (!then_branch) return lox::stmt_ptr{};
+	RES_TRY_ASSIGN(lox::stmt_ptr then_branch =, parse_statement());
 
-	lox::stmt_ptr else_branch;
+	lak::optional<lox::stmt_ptr> else_branch;
 	if (match({lox::token_type::ELSE}))
 	{
-		else_branch = parse_statement();
-		if (!else_branch) return lox::stmt_ptr{};
+		RES_TRY_ASSIGN(else_branch =, parse_statement());
 	}
 
-	return lox::stmt::make_branch({
-	  .condition   = std::move(condition),
-	  .then_branch = std::move(then_branch),
-	  .else_branch = std::move(else_branch),
-	});
+	return lak::ok_t{lox::stmt::make_branch({
+	  .condition   = lak::move(condition),
+	  .then_branch = lak::move(then_branch),
+	  .else_branch = lak::move(else_branch),
+	})};
 }
 
-lox::stmt_ptr lox::parser::parse_while_loop_statement()
+lak::result<lox::stmt_ptr> lox::parser::parse_while_loop_statement()
 {
 	if (!consume(lox::token_type::LEFT_PAREN, u8"Expected '(' after 'while'."))
-		return lox::stmt_ptr{};
+		return lak::err_t{};
 
-	lox::expr_ptr condition = parse_expression();
-	if (!condition) return lox::stmt_ptr{};
+	RES_TRY_ASSIGN(lox::expr_ptr condition =, parse_expression());
 
 	if (!consume(lox::token_type::RIGHT_PAREN,
 	             u8"Expected ')' after condition."))
-		return lox::stmt_ptr{};
+		return lak::err_t{};
 
-	lox::stmt_ptr body = parse_statement();
-	if (!body) return lox::stmt_ptr{};
+	RES_TRY_ASSIGN(lox::stmt_ptr body =, parse_statement());
 
-	return lox::stmt::make_loop({
-	  .condition = std::move(condition),
-	  .body      = std::move(body),
-	});
+	return lak::ok_t{lox::stmt::make_loop({
+	  .condition = lak::move(condition),
+	  .body      = lak::move(body),
+	})};
 }
 
-lox::stmt_ptr lox::parser::parse_for_loop_statement()
+lak::result<lox::stmt_ptr> lox::parser::parse_for_loop_statement()
 {
 	if (!consume(lox::token_type::LEFT_PAREN, u8"Expected '(' after 'for'."))
-		return lox::stmt_ptr{};
+		return lak::err_t{};
 
-	lox::stmt_ptr init;
+	lak::optional<lox::stmt_ptr> init;
 	if (match({lox::token_type::VAR}))
 	{
-		init = parse_var_declaration();
-		if (!init) return lox::stmt_ptr{};
+		RES_TRY_ASSIGN(init =, parse_var_declaration());
 	}
 	else if (!match({lox::token_type::SEMICOLON})) // NOT a semicolon
 	{
-		init = parse_expression_statement();
-		if (!init) return lox::stmt_ptr{};
+		RES_TRY_ASSIGN(init =, parse_expression_statement());
 	}
 
-	lox::expr_ptr condition;
-	if (!check(lox::token_type::SEMICOLON))
-	{
-		condition = parse_expression();
-		if (!condition) return lox::stmt_ptr{};
-	}
+	RES_TRY_ASSIGN(lox::expr_ptr condition =,
+	               parse_expression().or_else(
+	                 [](lak::monostate) -> lak::result<lox::expr_ptr>
+	                 {
+		                 return lak::ok_t<lox::expr_ptr>{
+		                   lox::expr::make_literal({.value = true})};
+	                 }));
 	if (!consume(lox::token_type::SEMICOLON,
 	             u8"Expected ';' after loop condition."))
-		return lox::stmt_ptr{};
+		return lak::err_t{};
 
-	lox::expr_ptr increment;
+	lak::optional<lox::expr_ptr> increment;
 	if (!check(lox::token_type::RIGHT_PAREN))
 	{
-		increment = parse_expression();
-		if (!increment) return lox::stmt_ptr{};
+		RES_TRY_ASSIGN(increment =, parse_expression());
 	}
 	if (!consume(lox::token_type::RIGHT_PAREN,
 	             u8"Expected ')' after for clauses."))
-		return lox::stmt_ptr{};
+		return lak::err_t{};
 
-	lox::stmt_ptr body = parse_statement();
-	if (!body) return lox::stmt_ptr{};
+	RES_TRY_ASSIGN(lox::stmt_ptr body =, parse_statement());
 
-	if (increment)
+	if_ref (lox::expr_ptr & inc, increment)
 	{
 		std::vector<lox::stmt_ptr> statements;
-		statements.push_back(std::move(body));
-		statements.push_back(
-		  lox::stmt::make_expr({.expression = std::move(increment)}));
+		statements.push_back(lak::move(body));
+		statements.push_back(lox::stmt::make_expr({.expression = lak::move(inc)}));
+		increment.reset();
 
-		body = lox::stmt::make_block({.statements = std::move(statements)});
+		body = lox::stmt::make_block({.statements = lak::move(statements)});
 	}
-
-	if (!condition)
-		condition = lox::expr::make_literal({
-		  .value = true,
-		});
 
 	body = lox::stmt::make_loop({
-	  .condition = std::move(condition),
-	  .body      = std::move(body),
+	  .condition = lak::move(condition),
+	  .body      = lak::move(body),
 	});
 
-	if (init)
+	if_ref (lox::stmt_ptr & i, init)
 	{
 		std::vector<lox::stmt_ptr> statements;
-		statements.push_back(std::move(init));
-		statements.push_back(std::move(body));
+		statements.push_back(lak::move(i));
+		statements.push_back(lak::move(body));
+		init.reset();
 
-		body = lox::stmt::make_block({.statements = std::move(statements)});
+		body = lox::stmt::make_block({.statements = lak::move(statements)});
 	}
 
-	return body;
+	return lak::move_ok(body);
 }
 
-lox::stmt_ptr lox::parser::parse_statement()
+lak::result<lox::stmt_ptr> lox::parser::parse_statement()
 {
 	if (match({lox::token_type::FOR})) return parse_for_loop_statement();
 
@@ -598,77 +582,73 @@ lox::stmt_ptr lox::parser::parse_statement()
 
 	if (match({lox::token_type::LEFT_BRACE}))
 	{
-		if (std::optional<std::vector<lox::stmt_ptr>> block = parse_block(); block)
-			return lox::stmt::make_block({.statements = std::move(*block)});
-		else
-			return lox::stmt_ptr{};
+		return parse_block().map(
+		  [](std::vector<lox::stmt_ptr> &&block) -> lox::stmt_ptr
+		  { return lox::stmt::make_block({.statements = lak::move(block)}); });
 	}
 
 	return parse_expression_statement();
 }
 
-lox::stmt_ptr lox::parser::parse_var_declaration()
+lak::result<lox::stmt_ptr> lox::parser::parse_var_declaration()
 {
 	const lox::token *name =
 	  consume(lox::token_type::IDENTIFIER, u8"Expected variable name.");
-	if (!name) return lox::stmt_ptr{};
+	if (!name) return lak::err_t{};
 
-	lox::expr_ptr init;
+	lak::optional<lox::expr_ptr> init;
 	if (match({lox::token_type::EQUAL}))
 	{
-		init = parse_expression();
-		if (!init) return lox::stmt_ptr{};
+		RES_TRY_ASSIGN(init =, parse_expression());
 	}
 
 	if (!consume(lox::token_type::SEMICOLON,
 	             u8"Expected ';' after variable declaration."))
-		return lox::stmt_ptr{};
+		return lak::err_t{};
 
-	return lox::stmt::make_var({.name = *name, .init = std::move(init)});
+	return lak::ok_t{
+	  lox::stmt::make_var({.name = *name, .init = lak::move(init)})};
 }
 
-lox::stmt_ptr lox::parser::parse_class_declaration()
+lak::result<lox::stmt_ptr> lox::parser::parse_class_declaration()
 {
 	const lox::token *name =
 	  consume(lox::token_type::IDENTIFIER, u8"Expected class name.");
-	if (!name) return lox::stmt_ptr{};
+	if (!name) return lak::err_t{};
 
-	lox::expr_ptr superclass;
+	lak::optional<lox::expr::variable> superclass;
 	if (match({lox::token_type::LESS}))
 	{
 		if (!consume(lox::token_type::IDENTIFIER, u8"Expected superclass name."))
-			return lox::stmt_ptr{};
-		superclass = lox::expr::make_variable({
-		  .name = last(),
-		});
+			return lak::err_t{};
+		superclass = lox::expr::variable{.name = last()};
 	}
 
 	if (!consume(lox::token_type::LEFT_BRACE,
 	             u8"Expected '{' before class body."))
-		return lox::stmt_ptr{};
+		return lak::err_t{};
 
 	std::vector<lox::stmt::function_ptr> methods;
 	while (!check(lox::token_type::RIGHT_BRACE) && !empty())
-		if (lox::stmt_ptr method = parse_function(u8"method"); method)
-		{
-			assert(std::holds_alternative<lox::stmt::function_ptr>(method->value));
-			methods.emplace_back(std::get<lox::stmt::function_ptr>(method->value));
-		}
-		else
-			return lox::stmt_ptr{};
+	{
+		RES_TRY_ASSIGN(lox::stmt::function_ptr method =,
+		               parse_function_ptr(u8"method"));
+
+		methods.emplace_back(lak::move(method));
+	}
 
 	if (!consume(lox::token_type::RIGHT_BRACE,
 	             u8"Expected '}' after class body."))
-		return lox::stmt_ptr{};
+		return lak::err_t{};
 
-	return lox::stmt::make_type({
+	return lak::ok_t{lox::stmt::make_type({
 	  .name       = *name,
-	  .superclass = std::move(superclass),
-	  .methods    = std::move(methods),
-	});
+	  .superclass = lak::move(superclass),
+	  .methods    = lak::move(methods),
+	})};
 }
 
-lox::stmt_ptr lox::parser::parse_declaration()
+lak::result<lox::stmt_ptr> lox::parser::parse_declaration()
 {
 	auto result = [&]()
 	{
@@ -682,14 +662,18 @@ lox::stmt_ptr lox::parser::parse_declaration()
 			return parse_statement();
 	}();
 
-	if (!result) sync();
+	if (result.is_err()) sync();
 
 	return result;
 }
 
-std::vector<lox::stmt_ptr> lox::parser::parse()
+lak::result<std::vector<lox::stmt_ptr>> lox::parser::parse()
 {
 	std::vector<lox::stmt_ptr> result;
-	while (!empty()) result.push_back(parse_declaration());
-	return result;
+	while (!empty())
+	{
+		RES_TRY_ASSIGN(lox::stmt_ptr stmt =, parse_declaration());
+		result.push_back(lak::move(stmt));
+	}
+	return lak::move_ok(result);
 }
