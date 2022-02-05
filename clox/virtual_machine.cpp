@@ -1,6 +1,18 @@
 #include "virtual_machine.hpp"
 #include "common.hpp"
 
+lak::u8string_view lox::to_string(lox::interpret_error err)
+{
+	switch (err)
+	{
+#define LOX_INTERPRET_ERROR_TO_STRING(OP, ...)                                \
+	case lox::interpret_error::OP: return u8"" #OP ""_view;
+		LOX_INTERPRET_ERROR_FOREACH(LOX_INTERPRET_ERROR_TO_STRING)
+#undef LOX_INTERPRET_ERROR_TO_STRING
+		default: FATAL("Invalid error ", static_cast<unsigned>(err));
+	}
+}
+
 lak::result<> lox::virtual_machine::stack_push(lox::value v)
 {
 	if (stack_top == stack.size()) return lak::err_t{};
@@ -19,6 +31,26 @@ lox::interpret_result<> lox::virtual_machine::interpret(lox::chunk *c)
 	chunk = c;
 	ip    = lak::binary_reader{lak::span<const byte_t>{lak::span{chunk->code}}};
 	return run();
+}
+
+lox::interpret_result<> lox::virtual_machine::interpret(
+  lak::u8string_view file)
+{
+	return lox::compile(file).map_err(
+	  [](const lox::compile_error &err) -> lox::interpret_error
+	  {
+		  lak::visit(err,
+		             lak::overloaded{
+		               [](const lox::scan_error &err)
+		               {
+			               using lak::operator<<;
+			               // :TODO:
+			               std::cerr << err.message << "\n";
+		               },
+		               [](auto &&) {},
+		             });
+		  return lox::interpret_error::INTERPRET_COMPILE_ERROR;
+	  });
 }
 
 lox::interpret_result<> lox::virtual_machine::run()
@@ -73,4 +105,47 @@ lox::interpret_result<> lox::virtual_machine::run()
 			}
 		}
 	}
+}
+
+lox::interpret_result<> lox::virtual_machine::run_file(
+  const std::filesystem::path &file_path)
+{
+	return lak::read_file(file_path)
+	  .map_err(
+	    [&](const lak::errno_error &err) -> lox::interpret_error
+	    {
+		    std::cerr << "Failed to read file '" << file_path << "': " << err
+		              << "\n";
+		    return lox::interpret_error::INTERPRET_COMPILE_ERROR;
+	    })
+	  .and_then(
+	    [&](const lak::array<byte_t> &arr) -> lox::interpret_result<>
+	    {
+		    return interpret(
+		      lak::u8string_view(lak::span<const char8_t>(lak::span(arr))));
+	    });
+}
+
+lox::interpret_result<> lox::virtual_machine::run_prompt()
+{
+	for (bool running = true; running;)
+	{
+		using lak::operator<<;
+
+		std::cout << "> ";
+
+		lak::astring string;
+		std::getline(std::cin, string);
+		if (!std::cin.good()) break;
+		if (string.empty()) break;
+
+		string += "\n";
+
+		// lak::u8string out;
+		interpret(lak::as_u8string(string)).discard();
+		// std::cout << out;
+	}
+
+	std::cout << "\n";
+	return lak::ok_t{};
 }

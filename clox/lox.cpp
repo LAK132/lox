@@ -4,6 +4,6 @@
 
 int lox::usage()
 {
-	std::cerr << "Usage: jlox [script] [--dot]\n";
+	std::cerr << "Usage: clox [script]\n";
 	return EXIT_FAILURE;
 }

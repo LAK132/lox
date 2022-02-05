@@ -1,4 +1,6 @@
 #include "chunk.hpp"
+#include "compiler.hpp"
+#include "lox.hpp"
 #include "virtual_machine.hpp"
 
 #include <lak/string_literals.hpp>
@@ -8,28 +10,41 @@
 
 int main(int argc, char *argv[])
 {
-	(void)argc;
-	(void)argv;
+	if (argc > 3) return lox::usage();
 
-	lox::chunk chunk;
+	lak::optional<std::filesystem::path> file;
 
-	chunk.push_opcode(lox::opcode::OP_CONSTANT, 123);
-	chunk.push_code((uint8_t)chunk.push_constant(1.2), 123);
-
-	chunk.push_opcode(lox::opcode::OP_CONSTANT, 123);
-	chunk.push_code((uint8_t)chunk.push_constant(3.4), 123);
-
-	chunk.push_opcode(lox::opcode::OP_ADD, 123);
-
-	chunk.push_opcode(lox::opcode::OP_CONSTANT, 123);
-	chunk.push_code((uint8_t)chunk.push_constant(5.6), 123);
-
-	chunk.push_opcode(lox::opcode::OP_DIVIDE, 123);
-
-	chunk.push_opcode(lox::opcode::OP_NEGATE, 123);
-
-	chunk.push_opcode(lox::opcode::OP_RETURN, 123);
+	while (argc-- > 1)
+	{
+		const auto arg{lak::astring_view::from_c_str(argv[argc])};
+		if (arg == "--help"_view)
+		{
+			lox::usage();
+			return EXIT_SUCCESS;
+		}
+		else
+		{
+			file = lak::astring(arg);
+		}
+	}
 
 	lox::virtual_machine vm;
-	vm.interpret(&chunk);
+
+	auto result_parser{lak::overloaded{
+	  [](lak::monostate) -> int { return EXIT_SUCCESS; },
+	  [](lox::interpret_error err) -> int
+	  {
+		  std::cerr << lox::to_string(err) << "\n";
+		  return EXIT_FAILURE;
+	  },
+	}};
+
+	if (file)
+	{
+		return vm.run_file(*file).visit(result_parser);
+	}
+	else
+	{
+		return vm.run_prompt().visit(result_parser);
+	}
 }

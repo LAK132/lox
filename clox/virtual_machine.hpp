@@ -3,6 +3,7 @@
 
 #include "chunk.hpp"
 #include "common.hpp"
+#include "compiler.hpp"
 #include "value.hpp"
 
 #include <lak/array.hpp>
@@ -12,11 +13,18 @@
 
 namespace lox
 {
+#define LOX_INTERPRET_ERROR_FOREACH(MACRO, ...)                               \
+	EXPAND(MACRO(INTERPRET_COMPILE_ERROR, __VA_ARGS__))                         \
+	EXPAND(MACRO(INTERPRET_RUNTIME_ERROR, __VA_ARGS__))
+
 	enum struct interpret_error
 	{
-		INTERPRET_COMPILE_ERROR,
-		INTERPRET_RUNTIME_ERROR,
+#define LOX_INTERPRET_ERROR_ENUM(ERR, ...) ERR,
+		LOX_INTERPRET_ERROR_FOREACH(LOX_INTERPRET_ERROR_ENUM)
+#undef LOX_INTERPRET_ERROR_ENUM
 	};
+
+	lak::u8string_view to_string(lox::interpret_error err);
 
 	template<typename T = lak::monostate>
 	using interpret_result = lak::result<T, lox::interpret_error>;
@@ -35,7 +43,13 @@ namespace lox
 
 		lox::interpret_result<> interpret(lox::chunk *c);
 
+		lox::interpret_result<> interpret(lak::u8string_view file);
+
 		lox::interpret_result<> run();
+
+		lox::interpret_result<> run_file(const std::filesystem::path &file_path);
+
+		lox::interpret_result<> run_prompt();
 	};
 }
 
