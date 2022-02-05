@@ -73,8 +73,25 @@ size_t lox::chunk::disassemble_instruction(size_t offset) const
 	{
 		case lox::opcode::OP_CONSTANT:
 			return constant_instruction(*this, u8"OP_CONSTANT"_view, offset);
+
+		case lox::opcode::OP_ADD:
+			return simple_instruction(u8"OP_ADD"_view, offset);
+
+		case lox::opcode::OP_SUBTRACT:
+			return simple_instruction(u8"OP_SUBTRACT"_view, offset);
+
+		case lox::opcode::OP_MULTIPLY:
+			return simple_instruction(u8"OP_MULTIPLY"_view, offset);
+
+		case lox::opcode::OP_DIVIDE:
+			return simple_instruction(u8"OP_DIVIDE"_view, offset);
+
+		case lox::opcode::OP_NEGATE:
+			return simple_instruction(u8"OP_NEGATE"_view, offset);
+
 		case lox::opcode::OP_RETURN:
 			return simple_instruction(u8"OP_RETURN"_view, offset);
+
 		default:
 			std::cout << "Unknown opcode " << unsigned(instruction) << "\n";
 			return offset + 1U;

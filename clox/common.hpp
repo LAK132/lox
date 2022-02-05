@@ -1,0 +1,8 @@
+#ifndef LOX_COMMON_HPP
+#define LOX_COMMON_HPP
+
+#define LOX_DEBUG_TRACE_EXECUTION
+
+#define LOX_STACK_MAX 256
+
+#endif
