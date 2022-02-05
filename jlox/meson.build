@@ -1,4 +1,4 @@
-lox = files([
+jlox = files([
   'callable.cpp',
   'environment.cpp',
   'evaluator.cpp',

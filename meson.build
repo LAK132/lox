@@ -76,13 +76,14 @@ if cxx.compute_int(cplusplus) < 202002
 endif
 
 subdir('include')
-subdir('src')
+subdir('jlox')
 
 executable(
-  'lox',
-  lox,
+  'jlox',
+  jlox,
   override_options: 'cpp_std=' + version,
   include_directories: include_directories([
+    'jlox',
     'include',
     'include/lak/inc',
   ]),
