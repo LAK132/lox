@@ -77,6 +77,7 @@ endif
 
 subdir('include')
 subdir('jlox')
+subdir('clox')
 
 executable(
   'jlox',
@@ -84,6 +85,20 @@ executable(
   override_options: 'cpp_std=' + version,
   include_directories: include_directories([
     'jlox',
+    'include',
+    'include/lak/inc',
+  ]),
+  link_with: [
+    lak,
+  ],
+)
+
+executable(
+  'clox',
+  clox,
+  override_options: 'cpp_std=' + version,
+  include_directories: include_directories([
+    'clox',
     'include',
     'include/lak/inc',
   ]),
