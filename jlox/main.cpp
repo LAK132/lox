@@ -68,11 +68,8 @@ int main(int argc, char *argv[])
 	}
 	else if (file)
 	{
-		return interpreter.init_globals()
-		           .run_file(std::filesystem::path(argv[1]))
-		           .is_ok()
-		         ? EXIT_SUCCESS
-		         : EXIT_FAILURE;
+		return interpreter.init_globals().run_file(*file).is_ok() ? EXIT_SUCCESS
+		                                                          : EXIT_FAILURE;
 	}
 	else
 	{
