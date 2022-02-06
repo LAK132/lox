@@ -10,15 +10,14 @@ bool lox::parser::empty() const
 lox::parse_result<> lox::parser::next()
 {
 	if (empty())
-		return lak::err_t<lox::positional_error>{
-		  {.line = current.line, .message = u8"Unexpected end of file."_str}};
+		return lak::err_t{
+		  lox::parse_error::at(current.line, u8"Unexpected end of file."_str)};
 
-	return scanner.scan_token().map(
-	  [&](const lox::token &tok) -> lak::monostate
-	  {
-		  previous = lak::exchange(current, tok);
-		  return {};
-	  });
+	RES_TRY_ASSIGN(lox::token tok =, scanner.scan_token());
+
+	previous = current;
+	current  = tok;
+	return lak::ok_t{};
 }
 
 bool lox::parser::check(lox::token_type type) const
@@ -31,8 +30,7 @@ lox::parse_result<const lox::token &> lox::parser::consume(
   lox::token_type type, lak::u8string_view message_on_err)
 {
 	if (!check(type))
-		return lak::err_t<lox::positional_error>{
-		  {.line = current.line, .message = lak::u8string(message_on_err)}};
+		return lak::err_t{lox::parse_error::at(current, message_on_err)};
 
 	if (type == lox::token_type::EOF_TOK)
 		previous = current;
@@ -46,9 +44,8 @@ lox::parse_result<> lox::parser::emit_constant(const lox::value &val)
 	size_t constant = chunk.push_constant(val);
 
 	if (constant > UINT8_MAX)
-		return lak::err_t<lox::positional_error>{
-		  {.line    = previous.line,
-		   .message = u8"Too many constants in one chunk."_str}};
+		return lak::err_t{lox::parse_error::at(
+		  previous.line, u8"Too mand constants in one chunk."_str)};
 
 	chunk.push_opcode(lox::opcode::OP_CONSTANT, previous.line);
 	chunk.push_code(static_cast<uint8_t>(constant), previous.line);
@@ -77,15 +74,16 @@ lox::parse_result<> lox::parser::parse_unary()
 
 	switch (op.type)
 	{
+		case lox::token_type::BANG:
+			chunk.push_opcode(lox::opcode::OP_NOT, op.line);
+			break;
+
 		case lox::token_type::MINUS:
 			chunk.push_opcode(lox::opcode::OP_NEGATE, op.line);
 			break;
 
 		default:
-			return lak::err_t<lox::positional_error>{
-			  {.line = previous.line,
-			   .message =
-			     u8"Invalid operator '"_str + lak::u8string(op.lexeme) + u8"'"}};
+			return lak::err_t{lox::parse_error::at(op, u8"Invalid operator."_str)};
 	}
 
 	return lak::ok_t{};
@@ -101,6 +99,33 @@ lox::parse_result<> lox::parser::parse_binary()
 
 	switch (op.type)
 	{
+		case lox::token_type::BANG_EQUAL:
+			chunk.push_opcode(lox::opcode::OP_EQUAL, op.line);
+			chunk.push_opcode(lox::opcode::OP_NOT, op.line);
+			break;
+
+		case lox::token_type::EQUAL_EQUAL:
+			chunk.push_opcode(lox::opcode::OP_EQUAL, op.line);
+			break;
+
+		case lox::token_type::GREATER:
+			chunk.push_opcode(lox::opcode::OP_GREATER, op.line);
+			break;
+
+		case lox::token_type::GREATER_EQUAL:
+			chunk.push_opcode(lox::opcode::OP_LESS, op.line);
+			chunk.push_opcode(lox::opcode::OP_NOT, op.line);
+			break;
+
+		case lox::token_type::LESS:
+			chunk.push_opcode(lox::opcode::OP_LESS, op.line);
+			break;
+
+		case lox::token_type::LESS_EQUAL:
+			chunk.push_opcode(lox::opcode::OP_GREATER, op.line);
+			chunk.push_opcode(lox::opcode::OP_NOT, op.line);
+			break;
+
 		case lox::token_type::PLUS:
 			chunk.push_opcode(lox::opcode::OP_ADD, op.line);
 			break;
@@ -118,10 +143,32 @@ lox::parse_result<> lox::parser::parse_binary()
 			break;
 
 		default:
-			return lak::err_t<lox::positional_error>{
-			  {.line    = op.line,
-			   .message = u8"Invalid binary operator '"_str +
-			              lak::u8string(op.lexeme) + u8"'"}};
+			return lak::err_t{
+			  lox::parse_error::at(op, u8"Invalid binary operator."_str)};
+	}
+
+	return lak::ok_t{};
+}
+
+lox::parse_result<> lox::parser::parse_literal()
+{
+	switch (previous.type)
+	{
+		case lox::token_type::FALSE:
+			chunk.push_opcode(lox::opcode::OP_FALSE, previous.line);
+			break;
+
+		case lox::token_type::NIL:
+			chunk.push_opcode(lox::opcode::OP_NIL, previous.line);
+			break;
+
+		case lox::token_type::TRUE:
+			chunk.push_opcode(lox::opcode::OP_TRUE, previous.line);
+			break;
+
+		default:
+			return lak::err_t{
+			  lox::parse_error::at(previous, u8"Invalid literal."_str)};
 	}
 
 	return lak::ok_t{};
@@ -139,8 +186,8 @@ lox::parse_result<> lox::parser::parse_precedence(precedence prec)
 	auto prefix{get_rule(previous.type).prefix};
 
 	if (!prefix)
-		return lak::err_t<lox::positional_error>{
-		  {.line = previous.line, .message = u8"Expected expression."_str}};
+		return lak::err_t{
+		  lox::parse_error::at(previous, u8"Expected expression."_str)};
 
 	RES_TRY((this->*prefix)());
 
@@ -200,10 +247,83 @@ const lox::parser::parse_rule &lox::parser::get_rule(lox::token_type type)
 			return rule;
 		}
 
+		case lox::token_type::BANG:
+		{
+			static constexpr parse_rule rule{
+			  .prefix     = &lox::parser::parse_unary,
+			  .infix      = nullptr,
+			  .precedence = lox::parser::precedence::NONE,
+			};
+			return rule;
+		}
+
+		case lox::token_type::BANG_EQUAL:
+		{
+			static constexpr parse_rule rule{
+			  .prefix     = nullptr,
+			  .infix      = &lox::parser::parse_binary,
+			  .precedence = lox::parser::precedence::EQUALITY,
+			};
+			return rule;
+		}
+
+		case lox::token_type::EQUAL_EQUAL:
+		{
+			static constexpr parse_rule rule{
+			  .prefix     = nullptr,
+			  .infix      = &lox::parser::parse_binary,
+			  .precedence = lox::parser::precedence::EQUALITY,
+			};
+			return rule;
+		}
+
+		case lox::token_type::GREATER: [[fallthrough]];
+		case lox::token_type::GREATER_EQUAL: [[fallthrough]];
+		case lox::token_type::LESS: [[fallthrough]];
+		case lox::token_type::LESS_EQUAL:
+		{
+			static constexpr parse_rule rule{
+			  .prefix     = nullptr,
+			  .infix      = &lox::parser::parse_binary,
+			  .precedence = lox::parser::precedence::COMPARISON,
+			};
+			return rule;
+		}
+
 		case lox::token_type::NUMBER:
 		{
 			static constexpr parse_rule rule{
 			  .prefix     = &lox::parser::parse_number,
+			  .infix      = nullptr,
+			  .precedence = lox::parser::precedence::NONE,
+			};
+			return rule;
+		}
+
+		case lox::token_type::FALSE:
+		{
+			static constexpr parse_rule rule{
+			  .prefix     = &lox::parser::parse_literal,
+			  .infix      = nullptr,
+			  .precedence = lox::parser::precedence::NONE,
+			};
+			return rule;
+		}
+
+		case lox::token_type::NIL:
+		{
+			static constexpr parse_rule rule{
+			  .prefix     = &lox::parser::parse_literal,
+			  .infix      = nullptr,
+			  .precedence = lox::parser::precedence::NONE,
+			};
+			return rule;
+		}
+
+		case lox::token_type::TRUE:
+		{
+			static constexpr parse_rule rule{
+			  .prefix     = &lox::parser::parse_literal,
 			  .infix      = nullptr,
 			  .precedence = lox::parser::precedence::NONE,
 			};

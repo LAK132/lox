@@ -4,6 +4,7 @@
 #include "chunk.hpp"
 #include "common.hpp"
 #include "compiler.hpp"
+#include "error.hpp"
 #include "value.hpp"
 
 #include <lak/array.hpp>
@@ -13,18 +14,15 @@
 
 namespace lox
 {
-#define LOX_INTERPRET_ERROR_FOREACH(MACRO, ...)                               \
-	EXPAND(MACRO(INTERPRET_COMPILE_ERROR, __VA_ARGS__))                         \
-	EXPAND(MACRO(INTERPRET_RUNTIME_ERROR, __VA_ARGS__))
-
-	enum struct interpret_error
+	struct runtime_error_tag
 	{
-#define LOX_INTERPRET_ERROR_ENUM(ERR, ...) ERR,
-		LOX_INTERPRET_ERROR_FOREACH(LOX_INTERPRET_ERROR_ENUM)
-#undef LOX_INTERPRET_ERROR_ENUM
 	};
+	using runtime_error = lox::positional_error<lox::runtime_error_tag>;
 
-	lak::u8string_view to_string(lox::interpret_error err);
+	using interpret_error = lox::result_set<lox::scan_error,
+	                                        lox::parse_error,
+	                                        lox::compile_error,
+	                                        lox::runtime_error>;
 
 	template<typename T = lak::monostate>
 	using interpret_result = lak::result<T, lox::interpret_error>;
@@ -40,6 +38,7 @@ namespace lox
 
 		lak::result<> stack_push(lox::value v);
 		lak::result<lox::value> stack_pop();
+		lak::result<const lox::value &> stack_peek(size_t depth) const;
 
 		lox::interpret_result<> interpret(lox::chunk *c);
 
@@ -47,7 +46,13 @@ namespace lox
 
 		lox::interpret_result<> run();
 
-		lox::interpret_result<> run_file(const std::filesystem::path &file_path);
+		using run_file_error  = lox::result_set<lak::errno_error,
+                                           lox::scan_error,
+                                           lox::parse_error,
+                                           lox::compile_error,
+                                           lox::runtime_error>;
+		using run_file_result = lak::result<lak::monostate, run_file_error>;
+		run_file_result run_file(const std::filesystem::path &file_path);
 
 		lox::interpret_result<> run_prompt();
 	};

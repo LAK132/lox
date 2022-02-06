@@ -63,8 +63,7 @@ lox::scan_result<lox::token> lox::scanner::scan_string()
 
 	if (empty())
 	{
-		return lak::err_t<lox::positional_error>{
-		  {.line = line, .message = u8"Unterminated string."_str}};
+		return lak::err_t{lox::scan_error(line, u8"Unterminated string."_str)};
 	}
 
 	// the closing "
@@ -100,10 +99,8 @@ lox::scan_result<lox::token> lox::scanner::scan_number()
 		// no error
 		return build_token(lox::token_type::NUMBER, lox::value{number});
 	else
-		return lak::err_t<lox::positional_error>{{
-		  .line    = line,
-		  .message = u8"Invalid number. '"_str + lak::u8string(u8str) + u8"'",
-		}};
+		return lak::err_t{lox::scan_error(
+		  line, u8"Invalid number. '"_str + lak::u8string(u8str) + u8"'"_str)};
 }
 
 lox::scan_result<lox::token> lox::scanner::scan_identifier()
@@ -187,8 +184,8 @@ lox::scan_result<lox::token> lox::scanner::scan_token()
 					break;
 		}
 
-		return lak::err_t<lox::positional_error>{
-		  {.line = line, .message = u8"Unexpected character."_str}};
+		return lak::err_t{
+		  lox::scan_error::at(line, u8"Unexpected character."_str)};
 	}
 
 	return lak::ok_t{lox::token{

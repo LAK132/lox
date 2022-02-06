@@ -74,6 +74,24 @@ size_t lox::chunk::disassemble_instruction(size_t offset) const
 		case lox::opcode::OP_CONSTANT:
 			return constant_instruction(*this, u8"OP_CONSTANT"_view, offset);
 
+		case lox::opcode::OP_NIL:
+			return simple_instruction(u8"OP_NIL"_view, offset);
+
+		case lox::opcode::OP_TRUE:
+			return simple_instruction(u8"OP_TRUE"_view, offset);
+
+		case lox::opcode::OP_FALSE:
+			return simple_instruction(u8"OP_FALSE"_view, offset);
+
+		case lox::opcode::OP_EQUAL:
+			return simple_instruction(u8"OP_EQUAL"_view, offset);
+
+		case lox::opcode::OP_GREATER:
+			return simple_instruction(u8"OP_GREATER"_view, offset);
+
+		case lox::opcode::OP_LESS:
+			return simple_instruction(u8"OP_LESS"_view, offset);
+
 		case lox::opcode::OP_ADD:
 			return simple_instruction(u8"OP_ADD"_view, offset);
 
@@ -85,6 +103,9 @@ size_t lox::chunk::disassemble_instruction(size_t offset) const
 
 		case lox::opcode::OP_DIVIDE:
 			return simple_instruction(u8"OP_DIVIDE"_view, offset);
+
+		case lox::opcode::OP_NOT:
+			return simple_instruction(u8"OP_NOT"_view, offset);
 
 		case lox::opcode::OP_NEGATE:
 			return simple_instruction(u8"OP_NEGATE"_view, offset);

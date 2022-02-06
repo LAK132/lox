@@ -30,21 +30,39 @@ int main(int argc, char *argv[])
 
 	lox::virtual_machine vm;
 
-	auto result_parser{lak::overloaded{
-	  [](lak::monostate) -> int { return EXIT_SUCCESS; },
-	  [](lox::interpret_error err) -> int
-	  {
-		  std::cerr << lox::to_string(err) << "\n";
-		  return EXIT_FAILURE;
-	  },
-	}};
+	using lak::operator<<;
 
 	if (file)
 	{
-		return vm.run_file(*file).visit(result_parser);
+		return vm.run_file(*file).visit(lak::overloaded{
+		  [](lak::monostate) -> int { return EXIT_SUCCESS; },
+		  [](const lox::virtual_machine::run_file_error &err) -> int
+		  {
+			  return err.visit(lak::overloaded{
+			    [](const lak::errno_error &err) -> int
+			    {
+				    std::cerr << err << "\n";
+				    return EXIT_FAILURE;
+			    },
+			    []<typename T>(const lox::positional_error<T> &err) -> int
+			    {
+				    std::cerr << lox::to_string(err) << "\n";
+				    return EXIT_FAILURE;
+			    },
+			  });
+		  },
+		});
 	}
 	else
 	{
-		return vm.run_prompt().visit(result_parser);
+		return vm.run_prompt().visit(lak::overloaded{
+		  [](lak::monostate) -> int { return EXIT_SUCCESS; },
+		  [](const lox::interpret_error &err) -> int
+		  {
+			  err.visit([]<typename T>(const lox::positional_error<T> &err)
+			            { std::cerr << lox::to_string(err) << "\n"; });
+			  return EXIT_FAILURE;
+		  },
+		});
 	}
 }

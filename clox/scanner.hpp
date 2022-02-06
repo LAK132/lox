@@ -1,6 +1,7 @@
 #ifndef LOX_SCANNER_HPP
 #define LOX_SCANNER_HPP
 
+#include "error.hpp"
 #include "token.hpp"
 #include "value.hpp"
 
@@ -35,14 +36,13 @@ namespace lox
 	  {u8"while"_str, lox::token_type::WHILE},
 	};
 
-	struct positional_error
+	struct scan_error_tag
 	{
-		size_t line;
-		lak::u8string message;
 	};
+	using scan_error = lox::positional_error<lox::scan_error_tag>;
 
 	template<typename T = lak::monostate>
-	using scan_result = lak::result<T, lox::positional_error>;
+	using scan_result = lak::result<T, lox::scan_error>;
 
 	struct scanner
 	{

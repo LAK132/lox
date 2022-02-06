@@ -2,6 +2,7 @@
 #define LOX_PARSER_HPP
 
 #include "chunk.hpp"
+#include "error.hpp"
 #include "scanner.hpp"
 #include "token.hpp"
 
@@ -14,8 +15,13 @@
 
 namespace lox
 {
+	struct parse_error_tag;
+
+	using parse_error = lox::positional_error<lox::parse_error_tag>;
+
 	template<typename T = lak::monostate>
-	using parse_result = lak::result<T, lox::positional_error>;
+	using parse_result =
+	  lak::result<T, lox::result_set<lox::scan_error, lox::parse_error>>;
 
 	struct parser
 	{
@@ -41,6 +47,8 @@ namespace lox
 		lox::parse_result<> parse_unary();
 
 		lox::parse_result<> parse_binary();
+
+		lox::parse_result<> parse_literal();
 
 		lox::parse_result<> parse_expression();
 

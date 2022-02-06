@@ -13,10 +13,17 @@ namespace lox
 {
 #define LOX_OPCODE_FOREACH(MACRO, ...)                                        \
 	EXPAND(MACRO(OP_CONSTANT, __VA_ARGS__))                                     \
+	EXPAND(MACRO(OP_NIL, __VA_ARGS__))                                          \
+	EXPAND(MACRO(OP_TRUE, __VA_ARGS__))                                         \
+	EXPAND(MACRO(OP_FALSE, __VA_ARGS__))                                        \
+	EXPAND(MACRO(OP_EQUAL, __VA_ARGS__))                                        \
+	EXPAND(MACRO(OP_GREATER, __VA_ARGS__))                                      \
+	EXPAND(MACRO(OP_LESS, __VA_ARGS__))                                         \
 	EXPAND(MACRO(OP_ADD, __VA_ARGS__))                                          \
 	EXPAND(MACRO(OP_SUBTRACT, __VA_ARGS__))                                     \
 	EXPAND(MACRO(OP_MULTIPLY, __VA_ARGS__))                                     \
 	EXPAND(MACRO(OP_DIVIDE, __VA_ARGS__))                                       \
+	EXPAND(MACRO(OP_NOT, __VA_ARGS__))                                          \
 	EXPAND(MACRO(OP_NEGATE, __VA_ARGS__))                                       \
 	EXPAND(MACRO(OP_RETURN, __VA_ARGS__))
 
