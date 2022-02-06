@@ -1,36 +1,31 @@
 #include "compiler.hpp"
+#include "common.hpp"
 #include "scanner.hpp"
 
 #include <lak/debug.hpp>
 #include <lak/string_literals.hpp>
 
-lox::compile_result<> lox::compile(lak::u8string_view file)
+lox::compile_result<lox::chunk> lox::compile(lak::u8string_view file)
 {
 	lox::scanner scanner{file};
 
-	size_t line{0U};
+	lox::parser parser{scanner};
 
-	for (;;)
-	{
-		using lak::operator<<;
-		RES_TRY_ASSIGN(lox::token token =,
-		               scanner.scan_token().map_err(
-		                 [](lox::scan_error &&err) -> lox::compile_error
-		                 { return {lak::move(err)}; }));
+	RES_TRY(parser.next());
 
-		if (line != token.line)
-		{
-			std::cout << std::setfill('0') << std::setw(4) << token.line << " ";
-			line = token.line;
-		}
-		else
-			std::cout << "   | ";
+	RES_TRY(parser.parse_expression());
 
-		std::cout << std::setfill('0') << std::setw(4) << unsigned(token.type)
-		          << " '" << token.lexeme << "'\n";
+	RES_TRY_ASSIGN(lox::token eof_tok =,
+	               parser.consume(lox::token_type::EOF_TOK,
+	                              u8"Expected end of expression."_view));
 
-		if (token.type == lox::token_type::EOF_TOK) break;
-	}
+	lox::chunk result{lak::move(parser.chunk)};
 
-	return lak::ok_t{};
+	result.push_opcode(lox::opcode::OP_RETURN, eof_tok.line);
+
+#ifdef LOX_DEBUG_PRINT_CODE
+	result.disassemble(u8"code"_view);
+#endif
+
+	return lak::move_ok(result);
 }

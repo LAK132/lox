@@ -35,14 +35,14 @@ namespace lox
 	  {u8"while"_str, lox::token_type::WHILE},
 	};
 
-	struct scan_error
+	struct positional_error
 	{
 		size_t line;
 		lak::u8string message;
 	};
 
 	template<typename T = lak::monostate>
-	using scan_result = lak::result<T, lox::scan_error>;
+	using scan_result = lak::result<T, lox::positional_error>;
 
 	struct scanner
 	{

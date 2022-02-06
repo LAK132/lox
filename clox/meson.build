@@ -3,6 +3,7 @@ clox = files([
   'compiler.cpp',
   'lox.cpp',
   'main.cpp',
+  'parser.cpp',
   'scanner.cpp',
   'token.cpp',
   'value.cpp',

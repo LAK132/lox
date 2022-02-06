@@ -36,21 +36,17 @@ lox::interpret_result<> lox::virtual_machine::interpret(lox::chunk *c)
 lox::interpret_result<> lox::virtual_machine::interpret(
   lak::u8string_view file)
 {
-	return lox::compile(file).map_err(
-	  [](const lox::compile_error &err) -> lox::interpret_error
-	  {
-		  lak::visit(err,
-		             lak::overloaded{
-		               [](const lox::scan_error &err)
-		               {
-			               using lak::operator<<;
-			               // :TODO:
-			               std::cerr << err.message << "\n";
-		               },
-		               [](auto &&) {},
-		             });
-		  return lox::interpret_error::INTERPRET_COMPILE_ERROR;
-	  });
+	RES_TRY_ASSIGN(lox::chunk chunk =,
+	               lox::compile(file).map_err(
+	                 [](const lox::positional_error &err) -> lox::interpret_error
+	                 {
+		                 using lak::operator<<;
+		                 // :TODO:
+		                 std::cerr << err.message << "\n";
+		                 return lox::interpret_error::INTERPRET_COMPILE_ERROR;
+	                 }));
+
+	return interpret(&chunk);
 }
 
 lox::interpret_result<> lox::virtual_machine::run()

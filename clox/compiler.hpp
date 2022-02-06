@@ -1,6 +1,8 @@
 #ifndef LOX_COMPILER_HPP
 #define LOX_COMPILER_HPP
 
+#include "chunk.hpp"
+#include "parser.hpp"
 #include "scanner.hpp"
 
 #include <lak/file.hpp>
@@ -11,12 +13,10 @@
 
 namespace lox
 {
-	using compile_error = lak::variant<lox::scan_error>;
-
 	template<typename T = lak::monostate>
-	using compile_result = lak::result<T, lox::compile_error>;
+	using compile_result = lak::result<T, lox::positional_error>;
 
-	lox::compile_result<> compile(lak::u8string_view file);
+	lox::compile_result<lox::chunk> compile(lak::u8string_view file);
 }
 
 #endif

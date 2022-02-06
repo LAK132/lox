@@ -7,10 +7,10 @@ lak::u8string_view lox::to_string(lox::token_type type)
 {
 	switch (type)
 	{
-#define _GEN_TOKEN_TYPE(TOKEN)                                                \
+#define LOX_GEN_TOKEN_TYPE(TOKEN)                                             \
 	case token_type::TOKEN: return u8"" #TOKEN ""_view;
-		TOKEN_TYPE(_GEN_TOKEN_TYPE)
-#undef _GEN_TOKEN_TYPE
+		LOX_TOKEN_TYPE_FOREACH(LOX_GEN_TOKEN_TYPE)
+#undef LOX_GEN_TOKEN_TYPE
 		default: FATAL("Invalid token type");
 	}
 }

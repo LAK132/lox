@@ -11,7 +11,7 @@ namespace lox
 {
 #undef TRUE
 #undef FALSE
-#define TOKEN_TYPE(MACRO)                                                     \
+#define LOX_TOKEN_TYPE_FOREACH(MACRO)                                         \
 	/* single charcter tokens */                                                \
 	MACRO(LEFT_PAREN)                                                           \
 	MACRO(RIGHT_PAREN)                                                          \
@@ -59,9 +59,9 @@ namespace lox
 
 	enum struct token_type
 	{
-#define _GEN_TOKEN_TYPE(TOKEN) TOKEN,
-		TOKEN_TYPE(_GEN_TOKEN_TYPE)
-#undef _GEN_TOKEN_TYPE
+#define LOX_GEN_TOKEN_TYPE(TOKEN) TOKEN,
+		LOX_TOKEN_TYPE_FOREACH(LOX_GEN_TOKEN_TYPE)
+#undef LOX_GEN_TOKEN_TYPE
 	};
 
 	lak::u8string_view to_string(token_type type);
