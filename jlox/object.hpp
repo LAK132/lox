@@ -32,7 +32,7 @@ namespace lox
 
 	public:
 		object();
-		object(const object &) = default;
+		object(const object &)            = default;
 		object &operator=(const object &) = default;
 
 		object(lak::monostate value);
@@ -72,13 +72,13 @@ namespace lox
 		template<typename F>
 		auto visit(F &&f)
 		{
-			return lak::visit(value(), f);
+			return lak::visit(f, value());
 		}
 
 		template<typename F>
 		auto visit(F &&f) const
 		{
-			return lak::visit(value(), f);
+			return lak::visit(f, value());
 		}
 
 		friend inline std::ostream &operator<<(std::ostream &strm,

@@ -95,7 +95,6 @@ lox::callable::callable(const lox::type &type)
 size_t lox::callable::arity() const
 {
 	return lak::visit(
-	  _impl->value,
 	  lak::overloaded{
 	    [](const lox::callable::impl::native &c) -> size_t { return c.arity; },
 	    [](const lox::callable::impl::interpreted &c) -> size_t
@@ -105,13 +104,13 @@ size_t lox::callable::arity() const
 		    return c.type.find_method(u8"init").map_or(
 		      [](const lox::callable &init) { return init.arity(); }, size_t(0));
 	    },
-	  });
+	  },
+	  _impl->value);
 }
 
 lak::u8string lox::callable::to_string() const
 {
 	return lak::visit(
-	  _impl->value,
 	  lak::overloaded{
 	    [](const lox::callable::impl::native &) -> lak::u8string
 	    { return u8"<native function>"; },
@@ -119,7 +118,8 @@ lak::u8string lox::callable::to_string() const
 	    { return u8"<fn " + c.function->name.lexeme.to_string() + u8">"; },
 	    [](const lox::callable::impl::constructor &c) -> lak::u8string
 	    { return u8"<ctor " + c.type.name() + u8">"; },
-	  });
+	  },
+	  _impl->value);
 }
 
 bool lox::callable::operator==(const callable &rhs) const
@@ -127,7 +127,6 @@ bool lox::callable::operator==(const callable &rhs) const
 	if (_impl->value.index() != rhs._impl->value.index()) return false;
 
 	return lak::visit(
-	  _impl->value,
 	  lak::overloaded{
 	    [&](const lox::callable::impl::native &c) -> bool
 	    {
@@ -149,14 +148,14 @@ bool lox::callable::operator==(const callable &rhs) const
 		                       .template get<lox::callable::impl::constructor>()
 		                       ->type;
 	    },
-	  });
+	  },
+	  _impl->value);
 }
 
 lak::result<lox::object> lox::callable::operator()(
   lox::interpreter &interpreter, std::vector<lox::object> &&arguments) const
 {
 	return lak::visit(
-	  _impl->value,
 	  lak::overloaded{
 	    [&](const lox::callable::impl::native &c) -> lak::result<lox::object>
 	    { return c.function(interpreter, lak::move(arguments)); },
@@ -191,5 +190,6 @@ lak::result<lox::object> lox::callable::operator()(
 		        { return lak::ok_t<lox::object>{instance}; },
 		      });
 	    },
-	  });
+	  },
+	  _impl->value);
 }

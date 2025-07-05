@@ -1,69 +1,96 @@
-option(
-  'use_vendored_windows_sdl',
-  type: 'boolean',
-  value: false,
-  yield: false,
+# testing options
+
+option('lak_enable_tests',
+	type: 'boolean',
+	value: true,
+	yield: false,
 )
 
-option(
-  'lak_backend',
-  type: 'combo',
-  choices: [
-    'win32',
-    'xlib',
-    'xcb',
-    'sdl',
-    'qt',
-  ],
-  value: 'sdl',
-  yield: false,
+#ebnf2cpp
+
+option('lak_enable_ebnf2cpp',
+	type: 'boolean',
+	value: false,
+	yield: true,
 )
 
-option(
-  'enable_llvm',
-  type: 'boolean',
-  value: false,
-  yield: false,
+# windowing options
+
+option('lak_enable_windowing',
+	type: 'boolean',
+	value: false,
+	yield: true,
 )
 
-option(
-  'use_vendored_llvm',
-  type: 'boolean',
-  value: false,
-  yield: false,
+# llvm options
+
+option('lak_enable_llvm',
+	type: 'boolean',
+	value: false,
+	yield: true,
 )
 
-option(
-  'llvm_components',
-  type: 'array',
-  value: [
-    'Native',
-  ],
-  yield: false,
-)
-
-option(
-  'llvm_install_components',
-  type: 'array',
-  value: [
-    'Core',
-    'ExecutionEngine',
-    'OrcJIT',
-    'Support',
-  ],
-  yield: false,
-)
-
-option(
-  'llvm_parallel_link_jobs',
-  type: 'string',
-  value: '4',
-  yield: false,
-)
+# lmdb options
 
 option(
   'enable_lmdb',
   type: 'boolean',
   value: false,
-  yield: false,
+  yield: true,
+)
+
+# lua options
+
+option('lak_enable_lua',
+	type: 'boolean',
+	value: false,
+	yield: true,
+)
+
+# glm options
+
+option('lak_enable_glm',
+	type: 'boolean',
+	value: false,
+	yield: true,
+)
+
+# dear imgui options
+
+option('lak_enable_imgui',
+	type: 'boolean',
+	value: false,
+	yield: true,
+)
+
+# libfive options
+
+option('lak_enable_libfive',
+	type: 'boolean',
+	value: false,
+	yield: true,
+)
+
+# libgphoto2 options
+
+option('lak_enable_libgphoto2',
+	type: 'boolean',
+	value: false,
+	yield: true,
+)
+
+# stb options
+
+option('lak_enable_stb',
+	type: 'boolean',
+	value: false,
+	yield: true,
+)
+
+# godot-cpp options
+
+option('lak_enable_godot_cpp',
+	type: 'boolean',
+	value: false,
+	yield: true,
 )

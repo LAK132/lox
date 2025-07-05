@@ -92,16 +92,14 @@ bool lox::value::operator==(const lox::value &other) const
 
 std::ostream &lox::operator<<(std::ostream &strm, const lox::value &val)
 {
-	lak::visit(val._value,
-	           lak::overloaded{
-	             [&](lak::monostate) { strm << "nil"; },
-	             [&](const bool &b) { strm << (b ? "true" : "false"); },
-	             [&](const double &d) { strm << d; },
-	           });
+	lak::visit(
+	  lak::overloaded{
+	    [&](lak::monostate) { strm << "nil"; },
+	    [&](const bool &b) { strm << (b ? "true" : "false"); },
+	    [&](const double &d) { strm << d; },
+	  },
+	  val._value);
 	return strm;
 }
 
-lak::u8string lox::to_string(const lox::value &v)
-{
-	return lak::streamify(v);
-}
+lak::u8string lox::to_string(const lox::value &v) { return lak::streamify(v); }

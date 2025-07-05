@@ -93,13 +93,13 @@ namespace lox
 		template<typename F>
 		inline auto visit(F &&f)
 		{
-			return lak::visit(value, f);
+			return lak::visit(f, value);
 		}
 
 		template<typename F>
 		inline auto visit(F &&f) const
 		{
-			return lak::visit(value, f);
+			return lak::visit(f, value);
 		}
 	};
 }

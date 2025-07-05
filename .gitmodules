@@ -1,4 +1,0 @@
-[submodule "include/lak"]
-	path = include/lak
-	url = https://github.com/LAK132/lak
-	ignore = dirty

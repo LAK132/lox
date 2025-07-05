@@ -47,10 +47,10 @@ namespace lox
 		lox::interpret_result<> run();
 
 		using run_file_error  = lox::result_set<lak::errno_error,
-                                           lox::scan_error,
-                                           lox::parse_error,
-                                           lox::compile_error,
-                                           lox::runtime_error>;
+		                                        lox::scan_error,
+		                                        lox::parse_error,
+		                                        lox::compile_error,
+		                                        lox::runtime_error>;
 		using run_file_result = lak::result<lak::monostate, run_file_error>;
 		run_file_result run_file(const std::filesystem::path &file_path);
 

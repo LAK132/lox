@@ -83,19 +83,19 @@ namespace lox
 		template<typename F>
 		auto visit(F &&f) &
 		{
-			return lak::visit(value, lak::forward<F>(f));
+			return lak::visit(lak::forward<F>(f), value);
 		}
 
 		template<typename F>
 		auto visit(F &&f) const &
 		{
-			return lak::visit(value, lak::forward<F>(f));
+			return lak::visit(lak::forward<F>(f), value);
 		}
 
 		template<typename F>
 		auto visit(F &&f) &&
 		{
-			return lak::visit(lak::move(value), lak::forward<F>(f));
+			return lak::visit(lak::forward<F>(f), lak::move(value));
 		}
 	};
 

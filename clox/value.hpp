@@ -43,12 +43,12 @@ namespace lox
 		template<typename F>
 		auto visit(F &&f)
 		{
-			return lak::visit(_value, lak::forward<F>(f));
+			return lak::visit(lak::forward<F>(f), _value);
 		}
 		template<typename F>
 		auto visit(F &&f) const
 		{
-			return lak::visit(_value, lak::forward<F>(f));
+			return lak::visit(lak::forward<F>(f), _value);
 		}
 
 		bool operator==(const value &other) const;
